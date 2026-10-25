@@ -37,6 +37,22 @@ Pour inciter l'agent à l'utiliser, ajoutez dans `CLAUDE.md` / `AGENTS.md` :
 > `ask_user` plutôt que de poser les questions dans le terminal. Si le résultat est `pending`,
 > appelle `get_answers` avec le `session_id`, ne repose jamais les mêmes questions.
 
+## Docker, mcpo et Open WebUI
+
+```bash
+docker compose up -d --build          # agent-questions + mcpo
+```
+
+- Dans Open WebUI, ajoutez un serveur d'outils OpenAPI avec l'URL `http://mcpo:8000/agent-questions`
+  (clé : celle passée à `--api-key` dans `docker-compose.yml`). Les conteneurs doivent partager un réseau Docker.
+- Open WebUI (v0.6.31 et plus récent d'après sa documentation) sait aussi se connecter directement à un serveur
+  MCP Streamable HTTP : URL `http://agent-questions:4317/mcp`, sans mcpo.
+- Dans Docker, le navigateur ne s'ouvre pas tout seul : l'agent doit afficher l'URL renvoyée (`pending`).
+  Avec un modèle local, demandez-lui d'appeler `ask_user` avec `wait_seconds: 0`, de donner le lien, puis
+  d'appeler `get_answers` quand vous avez répondu.
+- Variables utiles : `AQ_BIND_HOST` (0.0.0.0 dans l'image), `AQ_ALLOWED_HOSTS` (noms Host acceptés, ex. `agent-questions`),
+  `AQ_PUBLIC_URL` (URL ouverte par votre navigateur).
+
 ## Développement
 
 ```bash
@@ -79,6 +95,9 @@ Résultat : `{ status: "answered" | "declined" | "pending", session_id, answers[
 | `AQ_DATA_DIR` | `~/.agent-questions` | Dossier de la base SQLite |
 | `AQ_WAIT_SECONDS` | `480` | Attente max avant de répondre `pending` |
 | `AQ_NO_OPEN` | | `1` pour ne pas ouvrir le navigateur |
+| `AQ_BIND_HOST` | `127.0.0.1` | Adresse d'écoute (`0.0.0.0` dans Docker) |
+| `AQ_ALLOWED_HOSTS` | | Noms d'hôte supplémentaires acceptés (séparés par des virgules) |
+| `AQ_PUBLIC_URL` | `http://127.0.0.1:<port>` | URL de l'UI vue par le navigateur |
 | `AQ_UI_DIR` | `ui/dist/ui/browser` | Dossier de l'UI construite |
 | `AQ_DEV` | | `1` pour accepter l'origine du `ng serve` |
 

@@ -1,0 +1,30 @@
+# Agent Questions + mcpo. À fusionner avec votre compose existant (Open WebUI, Ollama) ou à lancer à côté :
+# les conteneurs doivent partager un même réseau Docker pour se joindre par leur nom.
+services:
+  agent-questions:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Nom sous lequel mcpo contacte le serveur (en-tête Host accepté)
+      AQ_ALLOWED_HOSTS: agent-questions
+      # URL que VOTRE NAVIGATEUR utilise pour ouvrir l'interface
+      AQ_PUBLIC_URL: http://127.0.0.1:4317
+    ports:
+      # Publié uniquement sur la machine locale : le serveur n'a pas d'authentification
+      - "127.0.0.1:4317:4317"
+    volumes:
+      - aq-data:/data
+
+  mcpo:
+    image: ghcr.io/open-webui/mcpo:main
+    restart: unless-stopped
+    command: ["--host", "0.0.0.0", "--port", "8000", "--api-key", "change-me", "--config", "/config/mcpo.json"]
+    volumes:
+      - ./mcpo.json:/config/mcpo.json:ro
+    depends_on:
+      - agent-questions
+    # ports:
+    #   - "127.0.0.1:8000:8000"   # seulement si vous ajoutez l'outil comme « outil utilisateur » (appelé depuis le navigateur)
+
+volumes:
+  aq-data:

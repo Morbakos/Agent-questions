@@ -21,7 +21,9 @@ export async function buildApp(store: SessionStore, cfg: AppConfig): Promise<Fas
   const app = Fastify({ logger: { level: process.env.AQ_LOG ?? "info" } });
 
   // Protection contre le DNS rebinding et les requêtes cross-origin (cf. spec MCP, transport Streamable HTTP).
-  const hosts = new Set([`127.0.0.1:${cfg.port}`, `localhost:${cfg.port}`]);
+  const hosts = new Set(
+    ["127.0.0.1", "localhost", ...cfg.allowedHosts].map((h) => (h.includes(":") ? h : `${h}:${cfg.port}`)),
+  );
   const origins = new Set([...hosts].map((h) => `http://${h}`));
   if (cfg.dev) {
     origins.add("http://localhost:4200");

@@ -14,5 +14,6 @@ Agent Questions prêt.
   MCP       ${cfg.baseUrl}/mcp   (Streamable HTTP)
   Base      ${cfg.dbFile}
 
-Claude Code : claude mcp add --transport http agent-questions ${cfg.baseUrl}/mcp
+Écoute sur ${cfg.host}:${cfg.port}
+Claude Code : claude mcp add --transport http agent-questions http://127.0.0.1:${cfg.port}/mcp
 `);
