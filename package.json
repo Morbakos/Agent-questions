@@ -1,0 +1,14 @@
+{
+  "name": "agent-questions",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interface web pour poser des questions complexes à l'utilisateur depuis un agent (serveur MCP Streamable HTTP + UI Angular + SQLite).",
+  "workspaces": ["server", "ui"],
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "build": "npm run build -w ui && npm run build -w server",
+    "start": "npm run start -w server",
+    "dev:server": "AQ_DEV=1 npm run dev -w server",
+    "dev:ui": "npm run start -w ui"
+  }
+}
