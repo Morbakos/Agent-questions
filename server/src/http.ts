@@ -29,6 +29,12 @@ export async function buildApp(store: SessionStore, cfg: AppConfig): Promise<Fas
     origins.add("http://localhost:4200");
     origins.add("http://127.0.0.1:4200");
   }
+  // Origines supplémentaires autorisées (ex. l'UI de llama-server), séparées par des virgules.
+  // Toujours des origines précises : jamais "*", ce serveur n'a pas d'authentification.
+  for (const o of (process.env.AQ_ALLOWED_ORIGINS ?? "").split(",")) {
+    if (o.trim()) origins.add(o.trim());
+  }
+
   app.addHook("onRequest", async (req, reply) => {
     if (!hosts.has(req.headers.host ?? "")) {
       return reply.code(403).send({ error: "Host non autorisé" });
@@ -36,6 +42,21 @@ export async function buildApp(store: SessionStore, cfg: AppConfig): Promise<Fas
     const origin = req.headers.origin;
     if (origin && !origins.has(origin)) {
       return reply.code(403).send({ error: "Origin non autorisée" });
+    }
+    if (origin) {
+      // CORS uniquement pour les origines autorisées.
+      // reply.raw : la route /mcp fait reply.hijack(), donc on pose les en-têtes sur la réponse Node.
+      reply.raw.setHeader("access-control-allow-origin", origin);
+      reply.raw.setHeader("vary", "Origin");
+      if (req.method === "OPTIONS") {
+        reply.raw.setHeader("access-control-allow-methods", "GET, POST, DELETE, OPTIONS");
+        reply.raw.setHeader(
+          "access-control-allow-headers",
+          "content-type, accept, mcp-protocol-version, mcp-session-id, last-event-id",
+        );
+        reply.raw.setHeader("access-control-max-age", "600");
+        return reply.code(204).send();
+      }
     }
   });
 
@@ -111,6 +132,10 @@ export async function buildApp(store: SessionStore, cfg: AppConfig): Promise<Fas
   } else {
     app.get("/", async () => "UI non construite. Lancez : npm run build -w ui");
   }
+
+  app.get("/health", (req, reply) => {
+    reply.code(200).send({ "Status": "Agent question API is running" })
+  })
 
   return app;
 }

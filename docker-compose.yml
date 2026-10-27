@@ -1,30 +1,47 @@
-# Agent Questions + mcpo. À fusionner avec votre compose existant (Open WebUI, Ollama) ou à lancer à côté :
-# les conteneurs doivent partager un même réseau Docker pour se joindre par leur nom.
 services:
   agent-questions:
     build: .
     restart: unless-stopped
     environment:
-      # Nom sous lequel mcpo contacte le serveur (en-tête Host accepté)
+      # Le navigateur appellera ce serveur directement : si l'appel est refusé,
+      # ajoute 127.0.0.1:4317 et localhost:4317 à cette liste (format à vérifier dans ton code)
       AQ_ALLOWED_HOSTS: agent-questions
-      # URL que VOTRE NAVIGATEUR utilise pour ouvrir l'interface
       AQ_PUBLIC_URL: http://127.0.0.1:4317
+      AQ_ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
     ports:
-      # Publié uniquement sur la machine locale : le serveur n'a pas d'authentification
       - "127.0.0.1:4317:4317"
     volumes:
       - aq-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4317/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  mcpo:
-    image: ghcr.io/open-webui/mcpo:main
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
     restart: unless-stopped
-    command: ["--host", "0.0.0.0", "--port", "8000", "--api-key", "change-me", "--config", "/config/mcpo.json"]
+    environment:
+      LLAMA_CACHE: /models        # le modèle téléchargé survit aux recréations du conteneur
+    command:
+      - "-hf"
+      - "NobodyWho/Mistral_Ministral-3-8B-Instruct-GGUF:Q4_K_M"
+      - "--jinja"                 # indispensable pour l'appel d'outils
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "-c"
+      - "8192"
+      - "-t"
+      - "8"
+      - "--webui-mcp-proxy"     # à activer seulement si le navigateur est bloqué par CORS
+    ports:
+      - "127.0.0.1:8080:8080"
     volumes:
-      - ./mcpo.json:/config/mcpo.json:ro
-    depends_on:
-      - agent-questions
-    # ports:
-    #   - "127.0.0.1:8000:8000"   # seulement si vous ajoutez l'outil comme « outil utilisateur » (appelé depuis le navigateur)
+      - llama-models:/models
 
 volumes:
   aq-data:
+  llama-models:
