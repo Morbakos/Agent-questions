@@ -124,7 +124,7 @@ Pas d'authentification : le serveur écoute sur `127.0.0.1` et ne doit pas être
 - Le contenu markdown vient d'un agent : l'UI le passe par `marked` puis par le nettoyage d'Angular (`[innerHTML]`).
   Ne pas contourner avec `bypassSecurityTrust…`.
 
-## Conventions
+## Règles et conventions
 
 - Textes de l'UI, commentaires et README en **français** ; identifiants et descriptions d'outils MCP en anglais
   (ils sont lus par les modèles). Les messages de commit existants sont en anglais.
@@ -134,6 +134,16 @@ Pas d'authentification : le serveur écoute sur `127.0.0.1` et ne doit pas être
 - Les types partagés vivent dans `packages/shared/` : ne pas les redéclarer côté UI ou serveur. Après un changement dans
   `packages/shared/`, `npm run build -w @agent-questions/shared` (les tests serveur lisent ses sources, mais `tsc`, `ng` et `node` lisent `dist`).
 - Après un changement de comportement visible (variable `AQ_*`, outil, flux), mettre le README à jour.
+
+### Règles de travail
+
+Détail dans `.claude/rules/git-workflow.md`.
+
+- **Avant chaque commit** : rejouer `npm run lint`, `npm run format:check`, `npm run build` et `npm test`, et donner le
+  résultat. Pas de commit si l'un échoue.
+- **Jamais de `git push` sans accord explicite**, demandé dans une question distincte après le commit.
+- Ne jamais commiter `.mcp.json` (modification locale de l'utilisateur).
+- Modifier les fichiers avec l'outil Edit, pas avec `sed`.
 
 ## Vérifier
 
@@ -176,4 +186,3 @@ avec « appel interrompu par le client » si la connexion a été coupée), CORS
   consignes déjà écrites pour les agents.
 - Pas de nettoyage automatique des anciennes sessions ; pas de test de bout en bout dans un navigateur, ni du mode
   `--stdio`.
-- `docker-compose.yml.bak` (ancien montage avec mcpo) est versionné et peut être supprimé.
