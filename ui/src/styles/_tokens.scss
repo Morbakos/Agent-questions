@@ -1,0 +1,31 @@
+// Jetons de thème, en variables CSS pour suivre `prefers-color-scheme` sans recompiler.
+:root {
+	--paper: #eef1f4;
+	--surface: #ffffff;
+	--ink: #16202a;
+	--muted: #5b6877;
+	--rule: #d3dae2;
+	--accent: #2f5bea;
+	--accent-ink: #ffffff;
+	--wash: #e4eafb;
+	--ok: #1b7a57;
+	--danger: #b3261e;
+	--ui: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+	--mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+	color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--paper: #12171d;
+		--surface: #1a2129;
+		--ink: #e6ebf0;
+		--muted: #93a0af;
+		--rule: #2b3540;
+		--accent: #8fa9ff;
+		--accent-ink: #0e1420;
+		--wash: #222c44;
+		--ok: #4fc79b;
+		--danger: #ff8a80;
+	}
+}

@@ -5,6 +5,7 @@ import { RouterLink, RouterOutlet } from "@angular/router";
 	selector: "app-root",
 	imports: [RouterOutlet, RouterLink],
 	changeDetection: ChangeDetectionStrategy.OnPush,
+	styleUrl: "./app.scss",
 	template: `
 		<header class="top">
 			<a

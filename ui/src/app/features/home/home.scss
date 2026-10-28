@@ -1,0 +1,27 @@
+.session-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	border-top: 1px solid var(--rule);
+
+	li {
+		border-bottom: 1px solid var(--rule);
+	}
+
+	a {
+		display: flex;
+		flex-direction: column;
+		gap: 0.15rem;
+		padding: 0.9rem 0.25rem;
+		text-decoration: none;
+		color: var(--ink);
+
+		&:hover .s-title {
+			color: var(--accent);
+		}
+	}
+}
+
+.s-title {
+	font-weight: 600;
+}

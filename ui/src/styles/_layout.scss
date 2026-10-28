@@ -1,0 +1,9 @@
+// Conteneurs de page partagés par toutes les routes.
+.page {
+	padding: 2rem 1.5rem;
+}
+
+.narrow {
+	max-width: 42rem;
+	margin: 0 auto;
+}

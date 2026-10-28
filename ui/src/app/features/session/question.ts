@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
 import type { Answer, Question } from "@agent-questions/shared";
-import { MarkdownPipe } from "./markdown.pipe";
+import { MarkdownPipe } from "../../shared/markdown.pipe";
 
 const textOf = (event: Event): string => (event.target as HTMLTextAreaElement).value;
 
@@ -8,6 +8,7 @@ const textOf = (event: Event): string => (event.target as HTMLTextAreaElement).v
 	selector: "app-question",
 	imports: [MarkdownPipe],
 	changeDetection: ChangeDetectionStrategy.OnPush,
+	styleUrl: "./question.scss",
 	template: `
 		<section
 			class="q"

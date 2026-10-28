@@ -5,6 +5,7 @@
 		"ng": "ng",
 		"start": "ng serve",
 		"build": "ng build",
+		"test": "ng test --no-watch",
 		"watch": "ng build --watch --configuration development"
 	},
 	"private": true,
@@ -24,6 +25,8 @@
 		"@angular/build": "~21.1.1",
 		"@angular/cli": "~21.1.1",
 		"@angular/compiler-cli": "~21.1.0",
-		"typescript": "~5.9.2"
+		"jsdom": "^27.4.0",
+		"typescript": "~5.9.2",
+		"vitest": "^4.1.12"
 	}
 }

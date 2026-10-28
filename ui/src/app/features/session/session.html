@@ -1,0 +1,126 @@
+@switch (s.state()) {
+	@case ("loading") {
+		<p class="page narrow muted">Chargement…</p>
+	}
+	@case ("missing") {
+		<main class="page narrow">
+			<h1>Session introuvable</h1>
+			<p>Cette session n'existe pas ou a été supprimée. <a routerLink="/">Retour à la liste</a></p>
+		</main>
+	}
+	@case ("answered") {
+		<main class="page narrow">
+			<h1>Réponses envoyées</h1>
+			<p>L'agent a reçu vos réponses. Vous pouvez fermer cet onglet.</p>
+		</main>
+	}
+	@case ("declined") {
+		<main class="page narrow">
+			<h1>Refus transmis</h1>
+			<p>L'agent sait que vous ne souhaitez pas répondre. Vous pouvez fermer cet onglet.</p>
+		</main>
+	}
+	@case ("ready") {
+		@if (s.session(); as session) {
+			<div class="layout">
+				<nav
+					class="outline"
+					aria-label="Plan des questions">
+					<h2 class="outline-title">Plan</h2>
+					<ol>
+						@for (q of session.questions; track q.id) {
+							<li>
+								<button
+									type="button"
+									class="outline-link"
+									[class.done]="s.done(q)"
+									(click)="scrollTo(q.id)">
+									{{ q.header || q.id }}
+								</button>
+							</li>
+						}
+					</ol>
+					<p class="muted small">{{ s.doneCount() }} sur {{ session.questions.length }} répondues</p>
+				</nav>
+
+				<main class="questions">
+					<h1>{{ session.title }}</h1>
+					@if (s.updated()) {
+						<p
+							class="notice"
+							role="status">
+							L'agent a modifié les questions. Vos réponses ont été conservées quand c'était possible.
+						</p>
+					}
+					@for (q of session.questions; track q.id) {
+						<app-question
+							[question]="q"
+							[answer]="s.answerFor(q)"
+							(changed)="s.onAnswer(q.id, $event)" />
+					}
+
+					<div class="actions">
+						<div class="actions-row">
+							<button
+								type="button"
+								class="btn primary"
+								[disabled]="!s.canSubmit() || s.sending()"
+								(click)="s.submit()">
+								{{ s.sending() ? "Envoi…" : "Envoyer à l'agent" }}
+							</button>
+							@if (s.missing() > 0) {
+								<span class="muted small"
+									>{{ s.missing() }} réponse(s) obligatoire(s) manquante(s)</span
+								>
+							}
+							@if (s.savedAt(); as t) {
+								<span class="muted small">Brouillon enregistré à {{ t | date: "HH:mm" }}</span>
+							}
+						</div>
+
+						@if (declining()) {
+							<div class="decline">
+								<label for="reason">Pourquoi ne pas répondre ? (facultatif)</label>
+								<textarea
+									id="reason"
+									class="field"
+									rows="2"
+									[value]="reason()"
+									(input)="onReason($event)"></textarea>
+								<div class="actions-row">
+									<button
+										type="button"
+										class="btn danger"
+										(click)="s.decline(reason())">
+										Confirmer le refus
+									</button>
+									<button
+										type="button"
+										class="btn"
+										(click)="declining.set(false)">
+										Annuler
+									</button>
+								</div>
+							</div>
+						} @else {
+							<button
+								type="button"
+								class="btn quiet"
+								(click)="declining.set(true)">
+								Ne pas répondre
+							</button>
+						}
+
+						@if (s.error(); as e) {
+							<p
+								class="error"
+								role="alert">
+								{{ e }}
+							</p>
+						}
+					</div>
+				</main>
+			</div>
+		}
+	}
+}
