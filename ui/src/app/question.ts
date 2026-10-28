@@ -1,10 +1,13 @@
-import { Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { Answer, Question } from './models';
 import { MarkdownPipe } from './markdown.pipe';
+
+const textOf = (event: Event): string => (event.target as HTMLTextAreaElement).value;
 
 @Component({
   selector: 'app-question',
   imports: [MarkdownPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="q" [id]="'q-' + question().id">
       @if (question().header) {
@@ -26,7 +29,7 @@ import { MarkdownPipe } from './markdown.pipe';
           [attr.aria-label]="question().header || question().id"
           [placeholder]="question().placeholder || ''"
           [value]="answer().text"
-          (input)="setText($any($event.target).value)"
+          (input)="setText($event)"
         ></textarea>
       } @else {
         <div class="opts" role="group" [attr.aria-label]="question().header || question().id">
@@ -39,7 +42,12 @@ import { MarkdownPipe } from './markdown.pipe';
                 (change)="toggle(o.id)"
               />
               <span class="opt-body">
-                <span class="opt-label">{{ o.label }}</span>
+                <span class="opt-label">
+                  {{ o.label }}
+                  @if (o.recommended) {
+                    <span class="badge">Recommandé</span>
+                  }
+                </span>
                 @if (o.description) {
                   <span class="opt-desc">{{ o.description }}</span>
                 }
@@ -53,7 +61,7 @@ import { MarkdownPipe } from './markdown.pipe';
                 class="field"
                 placeholder="Précisez…"
                 [value]="answer().text"
-                (input)="setOther($any($event.target).value)"
+                (input)="setOther($event)"
               ></textarea>
             </label>
           }
@@ -81,12 +89,13 @@ export class QuestionComponent {
     }
   }
 
-  setText(text: string) {
-    this.changed.emit({ ...this.answer(), text });
+  setText(event: Event) {
+    this.changed.emit({ ...this.answer(), text: textOf(event) });
   }
 
   /** En choix unique, saisir « Autre » désélectionne les options (les deux s'excluent). */
-  setOther(text: string) {
+  setOther(event: Event) {
+    const text = textOf(event);
     const a = this.answer();
     this.changed.emit(this.question().type === 'single' && text.trim() ? { selected: [], text } : { ...a, text });
   }

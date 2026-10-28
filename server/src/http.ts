@@ -11,6 +11,7 @@ const view = (s: Session) => ({
   id: s.id,
   title: s.title,
   status: s.status,
+  revision: s.revision,
   questions: s.questions,
   draft: s.draft,
   answers: s.answers,

@@ -133,11 +133,17 @@ npm run dev:ui       # ng serve sur :4200, proxy /api vers :4317
 **`ask_user`** : `{ title?, questions[], session_id?, wait_seconds? }`
 
 Une question : `{ id, header?, prompt, context_markdown?, type: "single" | "multi" | "text", options?[], allow_other?, required?, placeholder? }`
-(`prompt` et `context_markdown` sont en markdown).
+(`prompt` et `context_markdown` sont en markdown). Une option : `{ id, label, description?, recommended? }` ; une option
+`recommended` s'affiche avec un badge « Recommandé » (elle n'est pas présélectionnée).
 
 Résultat : `{ status: "answered" | "declined" | "pending", session_id, answers[] | url }`.
 
 **`get_answers`** : `{ session_id, wait_seconds? }` : attend ou récupère les réponses d'une session.
+
+**`update_questions`** : `{ session_id, questions[], title?, wait_seconds? }` : remplace les questions d'une session
+que l'utilisateur n'a pas encore clôturée (liste complète, pas un diff), puis attend les réponses comme `ask_user`.
+Le formulaire ouvert se met à jour tout seul (sous 5 s) et le brouillon est conservé pour les questions dont l'`id`
+est inchangé. Refusé si la session est déjà répondue ou refusée.
 
 ## Choix de conception
 

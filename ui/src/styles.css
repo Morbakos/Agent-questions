@@ -89,6 +89,8 @@ code, pre { font-family: var(--mono); font-size: 0.9em; }
 .opt input { margin-top: 0.3rem; accent-color: var(--accent); }
 .opt-body { display: flex; flex-direction: column; }
 .opt-label { font-weight: 600; }
+.badge { display: inline-block; margin-left: 0.5rem; padding: 0.05rem 0.5rem; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-size: 0.75rem; font-weight: 700; vertical-align: 0.1em; }
+.notice { padding: 0.6rem 0.9rem; background: var(--wash); border-left: 3px solid var(--accent); border-radius: 4px; }
 .opt-desc { color: var(--muted); font-size: 0.92rem; }
 .other { display: flex; align-items: flex-start; gap: 0.75rem; margin-top: 0.25rem; }
 /* Alignée sur la première ligne du textarea : sa bordure (1px) + son padding vertical (0.55rem) */

@@ -12,7 +12,7 @@ Monorepo npm (workspaces `server` et `ui`), Node ≥ 22.13, TypeScript strict.
   dépendance native). ESM `NodeNext` : les imports relatifs portent l'extension `.js`.
   - `src/index.ts` : point d'entrée. Sans option, démarre le serveur HTTP. Avec `--stdio`, lance le relais.
   - `src/http.ts` : Fastify. API de l'UI (`/api/sessions…`), endpoint MCP `POST /mcp`, UI statique, `/health`.
-  - `src/mcp.ts` : les outils MCP `ask_user` et `get_answers`.
+  - `src/mcp.ts` : les outils MCP `ask_user`, `update_questions` et `get_answers`.
   - `src/sessions.ts` : `SessionStore` (SQLite + attente des réponses).
   - `src/stdio.ts` : mode stdio (relais, voir plus bas).
   - `src/schema.ts` : schémas zod des questions et réponses, validation des réponses.
@@ -54,6 +54,8 @@ réveillée. Ne séparez pas ces deux parties sans remplacer l'émetteur (pollin
 - **Reprise idempotente** : `findOrCreate` retrouve une session par hash du **titre et des questions** (pas du titre
   seul), tant qu'elle est en attente ou que ses réponses n'ont pas été livrées (`delivered_at`). Changer le titre ou
   reformuler une question crée une nouvelle session.
+- **Édition par l'agent** : `update_questions` remplace les questions d'une session en attente (`SessionStore.updateQuestions`),
+  recalcule le hash et incrémente `revision`. L'UI sonde la session toutes les 5 s et se met à jour si `revision` change.
 - **Attente** : `ask_user` et `get_answers` attendent jusqu'à `wait_seconds` (défaut `AQ_WAIT_SECONDS`, 480 s), puis
   répondent `pending` avec le `session_id`. L'agent n'est pas prévenu d'une réponse tardive : c'est à l'utilisateur de
   lui dire de rappeler `get_answers` (documenté dans le README).

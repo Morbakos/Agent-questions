@@ -19,8 +19,7 @@ interface JsonRpcMessage {
   jsonrpc?: string;
   id?: JsonRpcId;
   method?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params?: any;
+  params?: { requestId?: unknown };
 }
 
 const log = (...args: unknown[]) => console.error("[agent-questions stdio]", ...args);

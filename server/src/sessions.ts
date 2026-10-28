@@ -11,6 +11,8 @@ export interface Session {
   id: string;
   title: string;
   status: Status;
+  /** Incrémentée à chaque modification des questions par l'agent. */
+  revision: number;
   questions: Question[];
   draft: Answers;
   answers: Answers | null;
@@ -29,6 +31,7 @@ interface Row {
   draft: string;
   answers: string | null;
   status: Status;
+  revision: number;
   decline_reason: string | null;
   created_at: number;
   answered_at: number | null;
@@ -76,10 +79,24 @@ export class SessionStore {
       );
       CREATE INDEX IF NOT EXISTS idx_sessions_hash ON sessions(hash);
     `);
+    // Migration des bases créées avant l'édition des questions.
+    const cols = this.all<{ name: string }>("PRAGMA table_info(sessions)");
+    if (!cols.some((c) => c.name === "revision")) {
+      this.db.exec("ALTER TABLE sessions ADD COLUMN revision INTEGER NOT NULL DEFAULT 0");
+    }
+  }
+
+  // node:sqlite type les lignes en Record<string, SQLOutputValue> : on les type ici, une seule fois.
+  private one<T>(sql: string, ...params: string[]): T | undefined {
+    return this.db.prepare(sql).get(...params) as T | undefined;
+  }
+
+  private all<T>(sql: string, ...params: string[]): T[] {
+    return this.db.prepare(sql).all(...params) as T[];
   }
 
   private row(id: string): Row | undefined {
-    return this.db.prepare("SELECT * FROM sessions WHERE id = ?").get(id) as unknown as Row | undefined;
+    return this.one<Row>("SELECT * FROM sessions WHERE id = ?", id);
   }
 
   private toSession(r: Row): Session {
@@ -87,6 +104,7 @@ export class SessionStore {
       id: r.id,
       title: r.title,
       status: r.status,
+      revision: r.revision,
       questions: JSON.parse(r.questions) as Question[],
       draft: JSON.parse(r.draft) as Answers,
       answers: r.answers ? (JSON.parse(r.answers) as Answers) : null,
@@ -123,13 +141,12 @@ export class SessionStore {
       return { session: this.toSession(r), created: false };
     }
     const hash = hashQuestions(input.title, input.questions);
-    const existing = this.db
-      .prepare(
-        `SELECT * FROM sessions
-         WHERE hash = ? AND (status = 'pending' OR delivered_at IS NULL)
-         ORDER BY created_at DESC LIMIT 1`,
-      )
-      .get(hash) as unknown as Row | undefined;
+    const existing = this.one<Row>(
+      `SELECT * FROM sessions
+       WHERE hash = ? AND (status = 'pending' OR delivered_at IS NULL)
+       ORDER BY created_at DESC LIMIT 1`,
+      hash,
+    );
     if (existing) return { session: this.toSession(existing), created: false };
 
     const id = randomUUID();
@@ -142,10 +159,31 @@ export class SessionStore {
     return { session: this.mustGet(id), created: true };
   }
 
+  /**
+   * Remplace les questions d'une session en attente (édition par l'agent). Le brouillon de l'utilisateur est
+   * conservé pour les questions qui subsistent, sans les options qui n'existent plus.
+   */
+  updateQuestions(id: string, title: string | undefined, questions: Question[]): Session {
+    const s = this.mustGet(id);
+    if (s.status !== "pending") throw new HttpError(409, "Cette session est déjà clôturée.");
+    const newTitle = title ?? s.title;
+    const draft: Answers = {};
+    for (const q of questions) {
+      const d = s.draft[q.id];
+      if (!d) continue;
+      const known = new Set((q.options ?? []).map((o) => o.id));
+      draft[q.id] = { ...d, selected: d.selected.filter((x) => known.has(x)) };
+    }
+    this.db
+      .prepare(
+        `UPDATE sessions SET title = ?, questions = ?, draft = ?, hash = ?, revision = revision + 1 WHERE id = ?`,
+      )
+      .run(newTitle, JSON.stringify(questions), JSON.stringify(draft), hashQuestions(newTitle, questions), id);
+    return this.mustGet(id);
+  }
+
   listOpen(): Session[] {
-    const rows = this.db
-      .prepare("SELECT * FROM sessions WHERE status = 'pending' ORDER BY created_at DESC")
-      .all() as unknown as Row[];
+    const rows = this.all<Row>("SELECT * FROM sessions WHERE status = 'pending' ORDER BY created_at DESC");
     return rows.map((r) => this.toSession(r));
   }
 

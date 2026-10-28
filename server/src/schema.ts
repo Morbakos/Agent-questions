@@ -4,6 +4,10 @@ export const OptionSchema = z.object({
   id: z.string().min(1).max(64).describe("Stable option identifier"),
   label: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
+  recommended: z
+    .boolean()
+    .optional()
+    .describe("Mark the option(s) you recommend: shown with a 'Recommandé' badge. Not preselected."),
 });
 
 export const QuestionSchema = z

@@ -5,6 +5,7 @@ export interface Option {
   id: string;
   label: string;
   description?: string;
+  recommended?: boolean;
 }
 
 export interface Question {
@@ -31,6 +32,7 @@ export interface SessionView {
   id: string;
   title: string;
   status: Status;
+  revision: number;
   questions: Question[];
   draft: Answers;
   answers: Answers | null;

@@ -1,15 +1,22 @@
 import { DatePipe } from '@angular/common';
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from './api';
 import { Answer, Answers, Question, SessionView, emptyAnswer, isAnswered, isRequired } from './models';
 import { QuestionComponent } from './question';
+
+interface ApiError {
+  error?: string;
+  details?: string[];
+}
 
 type ViewState = 'loading' | 'missing' | 'ready' | 'answered' | 'declined';
 
 @Component({
   selector: 'app-session',
   imports: [QuestionComponent, RouterLink, DatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @switch (state()) {
       @case ('loading') {
@@ -52,6 +59,11 @@ type ViewState = 'loading' | 'missing' | 'ready' | 'answered' | 'declined';
 
             <main class="questions">
               <h1>{{ s.title }}</h1>
+              @if (updated()) {
+                <p class="notice" role="status">
+                  L'agent a modifié les questions. Vos réponses ont été conservées quand c'était possible.
+                </p>
+              }
               @for (q of s.questions; track q.id) {
                 <app-question [question]="q" [answer]="answerFor(q)" (changed)="onAnswer(q.id, $event)" />
               }
@@ -77,7 +89,7 @@ type ViewState = 'loading' | 'missing' | 'ready' | 'answered' | 'declined';
                       class="field"
                       rows="2"
                       [value]="reason()"
-                      (input)="reason.set($any($event.target).value)"
+                      (input)="onReason($event)"
                     ></textarea>
                     <div class="actions-row">
                       <button type="button" class="btn danger" (click)="decline()">Confirmer le refus</button>
@@ -102,6 +114,7 @@ type ViewState = 'loading' | 'missing' | 'ready' | 'answered' | 'declined';
 export class SessionComponent implements OnInit {
   private api = inject(ApiService);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   private id = '';
   private saveTimer?: ReturnType<typeof setTimeout>;
@@ -114,6 +127,7 @@ export class SessionComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly declining = signal(false);
   readonly reason = signal('');
+  readonly updated = signal(false);
 
   readonly doneCount = computed(() => {
     const s = this.session();
@@ -136,7 +150,41 @@ export class SessionComponent implements OnInit {
       this.state.set('ready');
     } catch {
       this.state.set('missing');
+      return;
     }
+    const timer = setInterval(() => void this.refresh(), 5000);
+    this.destroyRef.onDestroy(() => clearInterval(timer));
+  }
+
+  /** Détecte une modification des questions par l'agent (ou la clôture de la session) et met la vue à jour. */
+  private async refresh() {
+    const current = this.session();
+    if (this.state() !== 'ready' || !current || this.sending()) return;
+    try {
+      const s = await this.api.get(this.id);
+      if (s.status === 'answered') return this.state.set('answered');
+      if (s.status === 'declined') return this.state.set('declined');
+      if (s.revision === current.revision) return;
+      // Les réponses en cours de saisie priment sur le brouillon, mais seulement pour les options qui existent encore.
+      const local = this.answers();
+      this.answers.set(
+        Object.fromEntries(
+          s.questions.map((q) => {
+            const a = local[q.id] ?? s.draft[q.id] ?? emptyAnswer();
+            const known = new Set((q.options ?? []).map((o) => o.id));
+            return [q.id, { ...a, selected: a.selected.filter((id) => known.has(id)) }];
+          }),
+        ),
+      );
+      this.session.set(s);
+      this.updated.set(true);
+    } catch {
+      /* non bloquant : prochaine tentative dans 5 s */
+    }
+  }
+
+  onReason(event: Event) {
+    this.reason.set((event.target as HTMLTextAreaElement).value);
   }
 
   answerFor(q: Question): Answer {
@@ -192,9 +240,8 @@ export class SessionComponent implements OnInit {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private message(err: any, fallback: string): string {
-    const body = err?.error;
+  private message(err: unknown, fallback: string): string {
+    const body = err instanceof HttpErrorResponse ? (err.error as ApiError | null) : null;
     if (body?.details?.length) return `${body.error} : ${body.details.join(' ; ')}`;
     return body?.error ?? fallback;
   }

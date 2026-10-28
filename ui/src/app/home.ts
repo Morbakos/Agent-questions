@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ApiService } from './api';
 import { SessionSummary } from './models';
@@ -7,6 +7,7 @@ import { SessionSummary } from './models';
 @Component({
   selector: 'app-home',
   imports: [RouterLink, DatePipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="page narrow">
       <h1>Questions en attente</h1>
