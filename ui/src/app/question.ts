@@ -49,13 +49,13 @@ import { MarkdownPipe } from './markdown.pipe';
           @if (question().allow_other) {
             <label class="other">
               <span class="other-label">Autre</span>
-              <input
+              <textarea
                 class="field"
                 type="text"
                 placeholder="Précisez…"
                 [value]="answer().text"
                 (input)="setOther($any($event.target).value)"
-              />
+              ></textarea>
             </label>
           }
         </div>

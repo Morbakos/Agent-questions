@@ -90,8 +90,9 @@ code, pre { font-family: var(--mono); font-size: 0.9em; }
 .opt-body { display: flex; flex-direction: column; }
 .opt-label { font-weight: 600; }
 .opt-desc { color: var(--muted); font-size: 0.92rem; }
-.other { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.25rem; }
-.other-label { color: var(--muted); font-weight: 600; }
+.other { display: flex; align-items: flex-start; gap: 0.75rem; margin-top: 0.25rem; }
+/* Alignée sur la première ligne du textarea : sa bordure (1px) + son padding vertical (0.55rem) */
+.other-label { color: var(--muted); font-weight: 600; padding-top: calc(0.55rem + 1px); }
 .other .field { flex: 1; }
 
 .field { width: 100%; font: inherit; color: inherit; background: var(--surface); border: 1px solid var(--rule); border-radius: 8px; padding: 0.55rem 0.75rem; }
