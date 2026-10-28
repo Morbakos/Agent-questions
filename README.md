@@ -16,7 +16,7 @@ Agent ──MCP (Streamable HTTP, POST /mcp)──▶ ask_user ──▶ SQLite 
 Prérequis : Node ≥ 22.13 (SQLite intégré via `node:sqlite`, aucune dépendance native).
 
 ```bash
-npm install
+npm install --legacy-peer-deps   # le flag contourne un bug de npm 10.9 avec les peers d'Angular 21
 npm run build
 npm start            # UI + MCP sur http://127.0.0.1:4317
 ```
@@ -44,7 +44,7 @@ Le serveur se lance aussi comme un serveur MCP « classique » (stdio) : le clie
 lancer à la main.
 
 ```bash
-npm install && npm run build
+npm install --legacy-peer-deps && npm run build
 claude mcp add agent-questions -- node /chemin/absolu/server/dist/index.js --stdio
 ```
 
@@ -126,7 +126,13 @@ L'interface de `llama-server` est un client MCP qui s'exécute dans le navigateu
 ```bash
 npm run dev:server   # serveur avec rechargement, accepte l'origine localhost:4200
 npm run dev:ui       # ng serve sur :4200, proxy /api vers :4317
+npm test             # tests du serveur et de shared (Vitest), puis de l'UI (ng test)
+npm run lint         # ESLint
+npm run format       # Prettier (format:check pour vérifier seulement)
 ```
+
+Le dépôt est un monorepo : `shared/` (types et schémas communs), `server/` (MCP, API, SQLite) et `ui/` (Angular).
+Les conventions et la marche à suivre pour ajouter un outil MCP sont dans `CLAUDE.md`.
 
 ## Outils MCP
 
@@ -180,9 +186,7 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 
 ## Limites connues
 
-- Ce squelette n'a pas été compilé ni exécuté à sa création (pas d'accès réseau pour installer les dépendances).
-  Le premier `npm install && npm run build` peut révéler de petites erreurs de version ou de typage.
-- Les types de l'UI (`ui/src/app/models.ts`) dupliquent ceux du serveur : à synchroniser à la main.
+- Pas de test de bout en bout dans un navigateur, ni du mode `--stdio`.
 - Pas de nettoyage automatique des anciennes sessions.
 - Si le client MCP coupe les appels longs avant `AQ_WAIT_SECONDS`, baissez cette valeur ou réglez le timeout côté client.
 - Après un timeout, l'agent ne sait pas que vous avez répondu : demandez-lui de récupérer les réponses

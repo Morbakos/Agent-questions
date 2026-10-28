@@ -6,37 +6,77 @@ revient dans l'appel d'outil. Le README décrit l'usage ; ce fichier décrit com
 
 ## Stack et structure
 
-Monorepo npm (workspaces `server` et `ui`), Node ≥ 22.13, TypeScript strict.
+Monorepo npm (workspaces `shared`, `server` et `ui`), Node ≥ 22.13, TypeScript strict. Ordre de build :
+`shared` → `ui` → `server`.
 
+- `shared/` (`@agent-questions/shared`) : **source unique des types** entre serveur et UI. `src/schema.ts` (schémas zod
+  et types `z.infer`), `src/answers.ts` (logique pure sans zod : `isAnswered`, `validateAnswers`…), `src/views.ts`
+  (contrat de l'API de l'UI : `SessionView`, `SessionSummary`, `ApiError`). Compilé par `tsc` vers `dist`. L'UI
+  l'importe en `import type` et n'utilise à l'exécution que `answers.ts` (`sideEffects: false` : zod n'entre pas dans
+  le bundle).
 - `server/` : Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
   dépendance native). ESM `NodeNext` : les imports relatifs portent l'extension `.js`.
   - `src/index.ts` : point d'entrée. Sans option, démarre le serveur HTTP. Avec `--stdio`, lance le relais.
-  - `src/http.ts` : Fastify. API de l'UI (`/api/sessions…`), endpoint MCP `POST /mcp`, UI statique, `/health`.
-  - `src/mcp.ts` : les outils MCP `ask_user`, `update_questions` et `get_answers`.
-  - `src/sessions.ts` : `SessionStore` (SQLite + attente des réponses).
+  - `src/http.ts` : assemble Fastify (garde, gestion d'erreurs, routes). `src/routes/` : `guard.ts` (Host/Origin,
+    CORS), `sessions.ts` (API de l'UI), `mcp.ts` (endpoint `POST /mcp`), `static.ts` (UI), `views.ts`.
+  - `src/mcp.ts` : assemble le serveur MCP. `src/tools/` : **un fichier par outil** (`ask-user.ts`,
+    `update-questions.ts`, `get-answers.ts`) qui exporte `registerXxx(server, ctx)` ; `respond.ts` regroupe les helpers
+    communs (attente, réponse, ouverture du navigateur), `context.ts` le contexte injecté.
+  - `src/sessions.ts` : `SessionStore` (requêtes SQLite + attente des réponses). `src/db/migrations.ts` : migrations
+    ordonnées, version dans `PRAGMA user_version`.
   - `src/stdio.ts` : mode stdio (relais, voir plus bas).
-  - `src/schema.ts` : schémas zod des questions et réponses, validation des réponses.
   - `src/config.ts` : variables d'environnement `AQ_*`. `src/open.ts` : ouverture du navigateur.
-- `ui/` : Angular 21.1, composants standalone, signals, rendu markdown avec `marked`. Routes : `/` (liste des questions
-  en attente, rafraîchie toutes les 5 s) et `/s/:id` (formulaire d'une session). Styles globaux dans `src/styles.css`.
+- `ui/` : Angular 21.1, composants standalone, signals, `OnPush`, styles en SCSS, rendu markdown avec `marked`.
+  - `src/app/core/` (`api.ts`, `app.config.ts`), `src/app/shared/` (`markdown.pipe.ts`), `src/app/features/home/`
+    (liste des questions en attente, rafraîchie toutes les 5 s), `src/app/features/session/` (formulaire :
+    `session.ts` + `session.html`, `question.ts`, `session-state.ts` qui porte l'état, le brouillon et le sondage).
+    Les routes (`app.routes.ts`) sont chargées à la demande (`loadComponent`).
+  - Styles : `src/styles.scss` ne fait que `@use` les partiels de `src/styles/` (jetons de thème clair/sombre en
+    variables CSS, base, formulaires, markdown). Le reste vit dans le `.scss` du composant. Le markdown injecté par
+    `[innerHTML]` n'est pas atteint par les styles encapsulés : ses règles (`.md`) restent globales.
+
+### Ajouter un outil MCP
+
+1. Créer `server/src/tools/<nom>.ts` qui exporte `registerXxx(server, ctx)` (voir `get-answers.ts`, le plus court).
+2. L'appeler dans `createMcpServer` (`server/src/mcp.ts`).
+3. Si l'outil expose de nouveaux champs ou types, les ajouter dans `shared/src/`.
+4. Écrire ses tests dans `server/src/mcp.test.ts` (client MCP en mémoire) et mettre le README à jour.
+
+### Ajouter une page à l'UI
+
+Créer `ui/src/app/features/<nom>/`, puis une entrée `loadComponent` dans `app.routes.ts`. Les appels HTTP passent par
+`core/api.ts`.
 
 ## Commandes
 
 ```bash
 npm install --legacy-peer-deps   # sans le flag, npm 10.9 plante (« edgesOut ») sur les peers d'Angular 21
-npm run build              # UI puis serveur (l'UI est lente à compiler)
-npm run build -w server    # serveur seul : sert aussi de vérification de types
+npm run build              # shared, UI puis serveur (l'UI est lente à compiler)
+npm run build -w server    # serveur seul : sert aussi de vérification de types (shared doit être construit)
 npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
-npm run dev:ui             # ng serve sur :4200, proxy /api vers :4317
-npm run lint               # ESLint (typescript-eslint pour server/, angular-eslint pour ui/)
+npm run dev:ui             # construit shared puis ng serve sur :4200, proxy /api vers :4317
+npm run dev:shared         # tsc --watch sur shared (si vous le modifiez pendant un dev:ui / dev:server)
+npm test                   # tests du serveur et de shared (Vitest), puis de l'UI (ng test)
+npm run test:server        # tests serveur et shared seulement (rapide, sans compiler shared)
+npm run lint               # ESLint (typescript-eslint pour server/ et shared/, angular-eslint pour ui/)
 npm run format             # Prettier (format:check pour vérifier sans écrire)
 ```
 
 `npm run dev:server` utilise la syntaxe `AQ_DEV=1 …` de bash : sous PowerShell, faire
-`$env:AQ_DEV="1"; npm run dev -w server`.
+`npm run build -w shared; $env:AQ_DEV="1"; npm run dev -w server`.
 
-**Il n'y a pas de tests automatisés.** Après une modification, au minimum `npm run lint`, `npm run format:check` et
-`npm run build` (ou `npm run build -w server`), puis un essai réel (voir « Vérifier »).
+## Tests
+
+- Serveur et `shared` : Vitest (`vitest.config.ts` à la racine, qui lit les sources de `shared` sans le compiler).
+  `schema.test.ts`, `sessions.test.ts` (base en mémoire, dont la migration d'une ancienne base), `db/migrations.test.ts`,
+  `http.test.ts` (`fastify.inject`, sans port), `mcp.test.ts` (client MCP relié en mémoire au serveur, sans réseau).
+  `src/test-helpers.ts` : `testConfig()` force `noOpen: true`, **ne jamais le désactiver dans un test** (le navigateur
+  s'ouvrirait).
+- UI : `ng test` (builder `unit-test`, Vitest + jsdom). Les doubles et fixtures sont dans `ui/src/testing/` (exclu du
+  build de l'application). Avec des faux timers (`vi.useFakeTimers`), `fixture.whenStable()` peut ne jamais se
+  résoudre : utiliser `fixture.detectChanges()` après `vi.advanceTimersByTimeAsync`.
+- Après une modification : `npm run lint`, `npm run format:check`, `npm run build`, `npm test`, puis un essai réel
+  (voir « Vérifier »). Ces tests ne couvrent pas le navigateur ni le mode `--stdio`.
 
 ## Architecture : le point à ne pas casser
 
@@ -91,7 +131,8 @@ Pas d'authentification : le serveur écoute sur `127.0.0.1` et ne doit pas être
 - Style imposé par Prettier (`.prettierrc` à la racine) : tabulations, guillemets doubles, virgules finales, 120
   colonnes, un attribut par ligne dans les templates. YAML en 2 espaces (override). Ne pas formater à la main.
 - `any` interdit (`@typescript-eslint/no-explicit-any`) ; composants Angular en `OnPush`.
-- `ui/src/app/models.ts` **duplique** les types de `server/src/schema.ts` : à modifier ensemble, à la main.
+- Les types partagés vivent dans `shared/` : ne pas les redéclarer côté UI ou serveur. Après un changement dans
+  `shared/`, `npm run build -w shared` (les tests serveur lisent ses sources, mais `tsc`, `ng` et `node` lisent `dist`).
 - Après un changement de comportement visible (variable `AQ_*`, outil, flux), mettre le README à jour.
 
 ## Vérifier
@@ -133,7 +174,8 @@ avec « appel interrompu par le client » si la connexion a été coupée), CORS
   `AQ_WAIT_SECONDS` = 480 s.
 - `get_answers` est redondant avec `ask_user` + `session_id`. Le supprimer simplifierait l'interface mais casserait les
   consignes déjà écrites pour les agents.
-- Pas de nettoyage automatique des anciennes sessions ; pas de tests automatisés.
+- Pas de nettoyage automatique des anciennes sessions ; pas de test de bout en bout dans un navigateur, ni du mode
+  `--stdio`.
 - `docker-compose.yml.bak` est versionné et peut être supprimé. `mcpo.json` n'est plus utilisé par le compose actuel
   (reste de l'ancien montage Open WebUI + mcpo, décrit dans le README).
-- Le textarea « Autre » de `question.ts` porte un attribut `type="text"` sans effet.
+- `ui-backup/` (ancienne UI, conservée pendant la recréation du projet Angular) peut être supprimé.
