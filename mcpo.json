@@ -1,8 +1,0 @@
-{
-	"mcpServers": {
-		"agent-questions": {
-			"type": "streamable-http",
-			"url": "http://agent-questions:4317/mcp"
-		}
-	}
-}

@@ -5,11 +5,11 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-	{ ignores: ["**/dist/**", "**/.angular/**", "ui-backup/**", "node_modules/**"] },
+	{ ignores: ["**/dist/**", "**/.angular/**", "node_modules/**"] },
 
 	// Serveur et paquet partagé : Node.
 	{
-		files: ["server/**/*.ts", "shared/**/*.ts"],
+		files: ["packages/server/**/*.ts", "packages/shared/**/*.ts"],
 		extends: [eslint.configs.recommended, ...tseslint.configs.recommended, ...tseslint.configs.stylistic],
 		languageOptions: { globals: globals.node },
 		rules: {
@@ -19,7 +19,7 @@ export default tseslint.config(
 
 	// UI Angular : composants (TypeScript) et templates.
 	{
-		files: ["ui/**/*.ts"],
+		files: ["packages/ui/**/*.ts"],
 		extends: [
 			eslint.configs.recommended,
 			...tseslint.configs.recommended,
@@ -36,7 +36,7 @@ export default tseslint.config(
 		},
 	},
 	{
-		files: ["ui/**/*.html"],
+		files: ["packages/ui/**/*.html"],
 		extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
 	},
 

@@ -6,15 +6,15 @@ revient dans l'appel d'outil. Le README décrit l'usage ; ce fichier décrit com
 
 ## Stack et structure
 
-Monorepo npm (workspaces `shared`, `server` et `ui`), Node ≥ 22.13, TypeScript strict. Ordre de build :
+Monorepo npm (workspaces `packages/shared`, `packages/server` et `packages/ui`), Node ≥ 22.13, TypeScript strict. Ordre de build :
 `shared` → `ui` → `server`.
 
-- `shared/` (`@agent-questions/shared`) : **source unique des types** entre serveur et UI. `src/schema.ts` (schémas zod
+- `packages/shared/` (`@agent-questions/shared`) : **source unique des types** entre serveur et UI. `src/schema.ts` (schémas zod
   et types `z.infer`), `src/answers.ts` (logique pure sans zod : `isAnswered`, `validateAnswers`…), `src/views.ts`
   (contrat de l'API de l'UI : `SessionView`, `SessionSummary`, `ApiError`). Compilé par `tsc` vers `dist`. L'UI
   l'importe en `import type` et n'utilise à l'exécution que `answers.ts` (`sideEffects: false` : zod n'entre pas dans
   le bundle).
-- `server/` : Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
+- `packages/server/` : Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
   dépendance native). ESM `NodeNext` : les imports relatifs portent l'extension `.js`.
   - `src/index.ts` : point d'entrée. Sans option, démarre le serveur HTTP. Avec `--stdio`, lance le relais.
   - `src/http.ts` : assemble Fastify (garde, gestion d'erreurs, routes). `src/routes/` : `guard.ts` (Host/Origin,
@@ -26,7 +26,7 @@ Monorepo npm (workspaces `shared`, `server` et `ui`), Node ≥ 22.13, TypeScript
     ordonnées, version dans `PRAGMA user_version`.
   - `src/stdio.ts` : mode stdio (relais, voir plus bas).
   - `src/config.ts` : variables d'environnement `AQ_*`. `src/open.ts` : ouverture du navigateur.
-- `ui/` : Angular 21.1, composants standalone, signals, `OnPush`, styles en SCSS, rendu markdown avec `marked`.
+- `packages/ui/` : Angular 21.1, composants standalone, signals, `OnPush`, styles en SCSS, rendu markdown avec `marked`.
   - `src/app/core/` (`api.ts`, `app.config.ts`), `src/app/shared/` (`markdown.pipe.ts`), `src/app/features/home/`
     (liste des questions en attente, rafraîchie toutes les 5 s), `src/app/features/session/` (formulaire :
     `session.ts` + `session.html`, `question.ts`, `session-state.ts` qui porte l'état, le brouillon et le sondage).
@@ -37,14 +37,14 @@ Monorepo npm (workspaces `shared`, `server` et `ui`), Node ≥ 22.13, TypeScript
 
 ### Ajouter un outil MCP
 
-1. Créer `server/src/tools/<nom>.ts` qui exporte `registerXxx(server, ctx)` (voir `get-answers.ts`, le plus court).
-2. L'appeler dans `createMcpServer` (`server/src/mcp.ts`).
-3. Si l'outil expose de nouveaux champs ou types, les ajouter dans `shared/src/`.
-4. Écrire ses tests dans `server/src/mcp.test.ts` (client MCP en mémoire) et mettre le README à jour.
+1. Créer `packages/server/src/tools/<nom>.ts` qui exporte `registerXxx(server, ctx)` (voir `get-answers.ts`, le plus court).
+2. L'appeler dans `createMcpServer` (`packages/server/src/mcp.ts`).
+3. Si l'outil expose de nouveaux champs ou types, les ajouter dans `packages/shared/src/`.
+4. Écrire ses tests dans `packages/server/src/mcp.test.ts` (client MCP en mémoire) et mettre le README à jour.
 
 ### Ajouter une page à l'UI
 
-Créer `ui/src/app/features/<nom>/`, puis une entrée `loadComponent` dans `app.routes.ts`. Les appels HTTP passent par
+Créer `packages/ui/src/app/features/<nom>/`, puis une entrée `loadComponent` dans `app.routes.ts`. Les appels HTTP passent par
 `core/api.ts`.
 
 ## Commandes
@@ -52,18 +52,18 @@ Créer `ui/src/app/features/<nom>/`, puis une entrée `loadComponent` dans `app.
 ```bash
 npm install --legacy-peer-deps   # sans le flag, npm 10.9 plante (« edgesOut ») sur les peers d'Angular 21
 npm run build              # shared, UI puis serveur (l'UI est lente à compiler)
-npm run build -w server    # serveur seul : sert aussi de vérification de types (shared doit être construit)
+npm run build -w @agent-questions/server    # serveur seul : sert aussi de vérification de types (shared doit être construit)
 npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
 npm run dev:ui             # construit shared puis ng serve sur :4200, proxy /api vers :4317
 npm run dev:shared         # tsc --watch sur shared (si vous le modifiez pendant un dev:ui / dev:server)
 npm test                   # tests du serveur et de shared (Vitest), puis de l'UI (ng test)
 npm run test:server        # tests serveur et shared seulement (rapide, sans compiler shared)
-npm run lint               # ESLint (typescript-eslint pour server/ et shared/, angular-eslint pour ui/)
+npm run lint               # ESLint (typescript-eslint pour packages/server et packages/shared, angular-eslint pour packages/ui)
 npm run format             # Prettier (format:check pour vérifier sans écrire)
 ```
 
 `npm run dev:server` utilise la syntaxe `AQ_DEV=1 …` de bash : sous PowerShell, faire
-`npm run build -w shared; $env:AQ_DEV="1"; npm run dev -w server`.
+`npm run build -w @agent-questions/shared; $env:AQ_DEV="1"; npm run dev -w @agent-questions/server`.
 
 ## Tests
 
@@ -72,7 +72,7 @@ npm run format             # Prettier (format:check pour vérifier sans écrire)
   `http.test.ts` (`fastify.inject`, sans port), `mcp.test.ts` (client MCP relié en mémoire au serveur, sans réseau).
   `src/test-helpers.ts` : `testConfig()` force `noOpen: true`, **ne jamais le désactiver dans un test** (le navigateur
   s'ouvrirait).
-- UI : `ng test` (builder `unit-test`, Vitest + jsdom). Les doubles et fixtures sont dans `ui/src/testing/` (exclu du
+- UI : `ng test` (builder `unit-test`, Vitest + jsdom). Les doubles et fixtures sont dans `packages/ui/src/testing/` (exclu du
   build de l'application). Avec des faux timers (`vi.useFakeTimers`), `fixture.whenStable()` peut ne jamais se
   résoudre : utiliser `fixture.detectChanges()` après `vi.advanceTimersByTimeAsync`.
 - Après une modification : `npm run lint`, `npm run format:check`, `npm run build`, `npm test`, puis un essai réel
@@ -131,8 +131,8 @@ Pas d'authentification : le serveur écoute sur `127.0.0.1` et ne doit pas être
 - Style imposé par Prettier (`.prettierrc` à la racine) : tabulations, guillemets doubles, virgules finales, 120
   colonnes, un attribut par ligne dans les templates. YAML en 2 espaces (override). Ne pas formater à la main.
 - `any` interdit (`@typescript-eslint/no-explicit-any`) ; composants Angular en `OnPush`.
-- Les types partagés vivent dans `shared/` : ne pas les redéclarer côté UI ou serveur. Après un changement dans
-  `shared/`, `npm run build -w shared` (les tests serveur lisent ses sources, mais `tsc`, `ng` et `node` lisent `dist`).
+- Les types partagés vivent dans `packages/shared/` : ne pas les redéclarer côté UI ou serveur. Après un changement dans
+  `packages/shared/`, `npm run build -w @agent-questions/shared` (les tests serveur lisent ses sources, mais `tsc`, `ng` et `node` lisent `dist`).
 - Après un changement de comportement visible (variable `AQ_*`, outil, flux), mettre le README à jour.
 
 ## Vérifier
@@ -148,7 +148,7 @@ curl -s -X POST http://127.0.0.1:4317/mcp -H 'Content-Type: application/json' \
 Pour répondre sans navigateur : `POST /api/sessions/<id>/answers` avec `{"<question_id>":{"selected":["<option_id>"],"text":""}}`.
 Un appel `ask_user` avec `wait_seconds` positif doit se terminer dès que cette requête est envoyée.
 
-Le mode stdio se teste en lançant `node server/dist/index.js --stdio` avec un client qui envoie du JSON-RPC ligne par
+Le mode stdio se teste en lançant `node packages/server/dist/index.js --stdio` avec un client qui envoie du JSON-RPC ligne par
 ligne : vérifier le démarrage automatique du serveur, le réveil de l'attente par l'API de l'UI, l'annulation, et que
 stdout ne contient que du JSON-RPC. Jusqu'ici ce mode n'a été validé que sous Linux, avec un client simulé.
 
@@ -176,6 +176,4 @@ avec « appel interrompu par le client » si la connexion a été coupée), CORS
   consignes déjà écrites pour les agents.
 - Pas de nettoyage automatique des anciennes sessions ; pas de test de bout en bout dans un navigateur, ni du mode
   `--stdio`.
-- `docker-compose.yml.bak` est versionné et peut être supprimé. `mcpo.json` n'est plus utilisé par le compose actuel
-  (reste de l'ancien montage Open WebUI + mcpo, décrit dans le README).
-- `ui-backup/` (ancienne UI, conservée pendant la recréation du projet Angular) peut être supprimé.
+- `docker-compose.yml.bak` (ancien montage avec mcpo) est versionné et peut être supprimé.

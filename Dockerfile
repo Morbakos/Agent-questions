@@ -2,9 +2,9 @@
 FROM node:24-slim AS build
 WORKDIR /app
 COPY package.json ./
-COPY shared/package.json shared/
-COPY server/package.json server/
-COPY ui/package.json ui/
+COPY packages/shared/package.json packages/shared/
+COPY packages/server/package.json packages/server/
+COPY packages/ui/package.json packages/ui/
 # --legacy-peer-deps : sans lui, npm 10.9 plante sur les peer dependencies d'Angular 21
 RUN npm install --legacy-peer-deps
 COPY . .
@@ -18,13 +18,13 @@ ENV NODE_ENV=production \
     AQ_NO_OPEN=1 \
     AQ_DATA_DIR=/data
 COPY package.json ./
-COPY shared/package.json shared/
-COPY server/package.json server/
-COPY ui/package.json ui/
-RUN npm install --omit=dev --legacy-peer-deps -w server
-COPY --from=build /app/shared/dist shared/dist
-COPY --from=build /app/server/dist server/dist
-COPY --from=build /app/ui/dist ui/dist
+COPY packages/shared/package.json packages/shared/
+COPY packages/server/package.json packages/server/
+COPY packages/ui/package.json packages/ui/
+RUN npm install --omit=dev --legacy-peer-deps -w @agent-questions/server
+COPY --from=build /app/packages/shared/dist packages/shared/dist
+COPY --from=build /app/packages/server/dist packages/server/dist
+COPY --from=build /app/packages/ui/dist packages/ui/dist
 VOLUME /data
 EXPOSE 4317
-CMD ["node", "server/dist/index.js"]
+CMD ["node", "packages/server/dist/index.js"]

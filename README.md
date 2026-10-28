@@ -45,7 +45,7 @@ lancer à la main.
 
 ```bash
 npm install --legacy-peer-deps && npm run build
-claude mcp add agent-questions -- node /chemin/absolu/server/dist/index.js --stdio
+claude mcp add agent-questions -- node /chemin/absolu/packages/server/dist/index.js --stdio
 ```
 
 Codex (`~/.codex/config.toml`) :
@@ -53,7 +53,7 @@ Codex (`~/.codex/config.toml`) :
 ```toml
 [mcp_servers.agent-questions]
 command = "node"
-args = ["/chemin/absolu/server/dist/index.js", "--stdio"]
+args = ["/chemin/absolu/packages/server/dist/index.js", "--stdio"]
 ```
 
 Le mode `--stdio` ne contient aucune logique : il vérifie qu'un serveur HTTP répond sur `AQ_PORT` (4317 par défaut),
@@ -89,16 +89,14 @@ Si l'agent a perdu ce `session_id` (appel coupé avant de l'avoir reçu, nouvell
   retrouve la session existante (voir « Reprise idempotente ») et renvoie vos réponses au lieu d'en créer une
   nouvelle. Si l'agent change le titre ou reformule une question, le serveur ouvre une nouvelle session vide.
 
-## Docker, mcpo et Open WebUI
+## Docker et Open WebUI
 
 ```bash
-docker compose up -d --build          # agent-questions + mcpo
+docker compose up -d --build agent-questions
 ```
 
-- Dans Open WebUI, ajoutez un serveur d'outils OpenAPI avec l'URL `http://mcpo:8000/agent-questions`
-  (clé : celle passée à `--api-key` dans `docker-compose.yml`). Les conteneurs doivent partager un réseau Docker.
-- Open WebUI (v0.6.31 et plus récent d'après sa documentation) sait aussi se connecter directement à un serveur
-  MCP Streamable HTTP : URL `http://agent-questions:4317/mcp`, sans mcpo.
+- Open WebUI (v0.6.31 et plus récent d'après sa documentation) se connecte directement à un serveur MCP
+  Streamable HTTP : URL `http://agent-questions:4317/mcp`. Les conteneurs doivent partager un réseau Docker.
 - Dans Docker, le navigateur ne s'ouvre pas tout seul (`AQ_NO_OPEN=1`). La description de l'outil demande à l'agent
   de vous donner l'adresse de l'UI (`AQ_PUBLIC_URL`) **avant** d'appeler `ask_user`, puis de faire un seul appel qui
   attend la réponse. Ouvrez cette adresse et laissez-la ouverte : la liste des questions en attente se rafraîchit
@@ -112,7 +110,7 @@ docker compose up -d --build          # agent-questions + mcpo
 ## llama.cpp (interface web de llama-server)
 
 L'interface de `llama-server` est un client MCP qui s'exécute dans le navigateur : elle appelle donc directement
-`http://127.0.0.1:4317/mcp` (transport Streamable HTTP, sans mcpo ni authentification).
+`http://127.0.0.1:4317/mcp` (transport Streamable HTTP, sans authentification).
 
 - Lancez `llama-server` avec `--jinja` (requis pour l'appel d'outils).
 - Le navigateur envoie un en-tête `Origin` : autorisez-le, par exemple
@@ -131,7 +129,7 @@ npm run lint         # ESLint
 npm run format       # Prettier (format:check pour vérifier seulement)
 ```
 
-Le dépôt est un monorepo : `shared/` (types et schémas communs), `server/` (MCP, API, SQLite) et `ui/` (Angular).
+Le dépôt est un monorepo : `packages/shared/` (types et schémas communs), `packages/server/` (MCP, API, SQLite) et `packages/ui/` (Angular).
 Les conventions et la marche à suivre pour ajouter un outil MCP sont dans `CLAUDE.md`.
 
 ## Outils MCP
@@ -181,7 +179,7 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 | `AQ_ALLOWED_HOSTS` | | Noms d'hôte supplémentaires acceptés (séparés par des virgules) |
 | `AQ_ALLOWED_ORIGINS` | | Origines `http://hôte:port` supplémentaires autorisées à appeler `/mcp` depuis un navigateur (séparées par des virgules), ex. l'interface de llama-server. Jamais `*` : le serveur n'a pas d'authentification |
 | `AQ_PUBLIC_URL` | `http://127.0.0.1:<port>` | URL de l'UI vue par le navigateur |
-| `AQ_UI_DIR` | `ui/dist/ui/browser` | Dossier de l'UI construite |
+| `AQ_UI_DIR` | `packages/ui/dist/ui/browser` | Dossier de l'UI construite |
 | `AQ_DEV` | | `1` pour accepter l'origine du `ng serve` |
 
 ## Limites connues
