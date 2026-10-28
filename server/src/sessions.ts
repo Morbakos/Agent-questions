@@ -219,6 +219,11 @@ export class SessionStore {
 		return this.mustGet(id);
 	}
 
+	/** Ferme la base (arrêt propre ; libère aussi le fichier, ce que Windows exige avant de le supprimer). */
+	close(): void {
+		this.db.close();
+	}
+
 	markDelivered(id: string): void {
 		this.db
 			.prepare("UPDATE sessions SET delivered_at = ? WHERE id = ? AND delivered_at IS NULL")
