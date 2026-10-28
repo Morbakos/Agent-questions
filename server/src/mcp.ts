@@ -20,7 +20,19 @@ const json = (value: unknown) => ({
 });
 
 export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer {
-  const server = new McpServer({ name: "agent-questions", version: "0.1.0" });
+  // Sans ouverture automatique du navigateur (Docker, serveur distant), c'est à l'agent de transmettre l'adresse.
+  // La page d'accueil liste les questions en attente et se rafraîchit seule : l'adresse de base suffit, l'agent peut
+  // la donner AVANT l'appel, qui reste unique (ask_user attend la réponse). get_answers ne sert qu'après un timeout.
+  const relayHint = cfg.noOpen
+    ? "The answer form does not open by itself. " +
+      `Before calling this tool, tell the user to open ${cfg.baseUrl} in a browser: pending question sets are ` +
+      "listed there and appear within a few seconds. Then call ask_user once: the call waits for the answers. " +
+      "Only if it returns 'pending', call get_answers with the session_id."
+    : "";
+  const server = new McpServer(
+    { name: "agent-questions", version: "0.1.0" },
+    relayHint ? { instructions: relayHint } : undefined,
+  );
 
   const urlOf = (s: Session) => `${cfg.baseUrl}/s/${s.id}`;
 
@@ -66,7 +78,9 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
       url: urlOf(s),
       message:
         "The user has not answered yet. Call get_answers with this session_id to keep waiting, " +
-        "and tell the user they can open the url if the page did not open by itself. Do not re-ask the questions.",
+        "and tell the user they can open the url if the page did not open by itself. " +
+        "If the user later tells you they have answered, call get_answers with this session_id to fetch the answers. " +
+        "Do not re-ask the questions.",
     });
   }
 
@@ -85,9 +99,17 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
     notify(0, `En attente de la réponse de l'utilisateur : ${urlOf(s)}`);
     let tick = 0;
     const keepalive = setInterval(() => notify(++tick, "En attente de la réponse de l'utilisateur"), 15_000);
+    const ms = Math.min(waitSeconds ?? cfg.defaultWaitSeconds, 3600) * 1000;
+    const startedAt = Date.now();
+    console.log(`[mcp] session ${s.id} : attente de ${ms / 1000}s`);
     try {
-      const ms = Math.min(waitSeconds ?? cfg.defaultWaitSeconds, 3600) * 1000;
       const final = await store.wait(s.id, ms, extra.signal);
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      // signal.aborted : le client a fermé la connexion (délai d'attente côté client, annulation, coupure réseau).
+      console.log(
+        `[mcp] session ${s.id} : ${final.status} après ${elapsed}s` +
+          (extra.signal.aborted ? " (appel interrompu par le client)" : ""),
+      );
       return toResult(final);
     } finally {
       clearInterval(keepalive);
@@ -102,7 +124,8 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
         "Ask the user a set of questions in a dedicated web form. Prefer this over inline questions when you " +
         "have several questions, long context (code, diffs, trade-offs) or many options. The call waits for the " +
         "answers. If the user has not answered in time the result is status 'pending' with a session_id: then " +
-        "call get_answers. Never re-ask the same questions: reuse the session_id.",
+        "call get_answers. Never re-ask the same questions: reuse the session_id." +
+        (relayHint ? ` ${relayHint}` : ""),
       inputSchema: {
         title: z.string().max(120).optional().describe("Short title of this question set"),
         questions: z.array(QuestionSchema).min(1).max(30),
@@ -111,7 +134,16 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
           .uuid()
           .optional()
           .describe("Existing session to keep waiting on (returned by a previous 'pending' result)"),
-        wait_seconds: z.number().int().min(0).max(3600).optional().describe("Max wait before returning 'pending'"),
+        wait_seconds: z
+          .number()
+          .int()
+          .min(0)
+          .max(3600)
+          .optional()
+          .describe(
+            `Leave it unset: the default (${cfg.defaultWaitSeconds}s) waits for the user's answers. ` +
+              "A small value, and especially 0, returns 'pending' immediately without waiting: avoid it.",
+          ),
       },
     },
     async ({ title, questions, session_id, wait_seconds }, extra) => {
@@ -135,7 +167,16 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
         "Returns status 'answered', 'declined' or 'pending'.",
       inputSchema: {
         session_id: z.string().uuid(),
-        wait_seconds: z.number().int().min(0).max(3600).optional(),
+        wait_seconds: z
+          .number()
+          .int()
+          .min(0)
+          .max(3600)
+          .optional()
+          .describe(
+            `Leave it unset: the default (${cfg.defaultWaitSeconds}s) waits for the user's answers. ` +
+              "0 only checks the current state without waiting.",
+          ),
       },
     },
     async ({ session_id, wait_seconds }, extra) => {

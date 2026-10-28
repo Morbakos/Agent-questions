@@ -3,10 +3,10 @@ services:
     build: .
     restart: unless-stopped
     environment:
-      # Le navigateur appellera ce serveur directement : si l'appel est refusé,
-      # ajoute 127.0.0.1:4317 et localhost:4317 à cette liste (format à vérifier dans ton code)
+      # Noms Host acceptés en plus de 127.0.0.1 et localhost (ici : le nom du service Docker)
       AQ_ALLOWED_HOSTS: agent-questions
       AQ_PUBLIC_URL: http://127.0.0.1:4317
+      # Origines autorisées à appeler /mcp depuis le navigateur (interface de llama-server)
       AQ_ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
     ports:
       - "127.0.0.1:4317:4317"
