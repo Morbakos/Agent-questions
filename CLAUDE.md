@@ -28,13 +28,15 @@ npm run build              # UI puis serveur (l'UI est lente à compiler)
 npm run build -w server    # serveur seul : sert aussi de vérification de types
 npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
 npm run dev:ui             # ng serve sur :4200, proxy /api vers :4317
+npm run lint               # ESLint (typescript-eslint pour server/, angular-eslint pour ui/)
+npm run format             # Prettier (format:check pour vérifier sans écrire)
 ```
 
 `npm run dev:server` utilise la syntaxe `AQ_DEV=1 …` de bash : sous PowerShell, faire
 `$env:AQ_DEV="1"; npm run dev -w server`.
 
-**Il n'y a ni tests automatisés ni script de lint.** Après une modification du serveur, au minimum
-`npm run build -w server`, puis un essai réel (voir « Vérifier »).
+**Il n'y a pas de tests automatisés.** Après une modification, au minimum `npm run lint`, `npm run format:check` et
+`npm run build` (ou `npm run build -w server`), puis un essai réel (voir « Vérifier »).
 
 ## Architecture : le point à ne pas casser
 
@@ -86,7 +88,9 @@ Pas d'authentification : le serveur écoute sur `127.0.0.1` et ne doit pas être
 
 - Textes de l'UI, commentaires et README en **français** ; identifiants et descriptions d'outils MCP en anglais
   (ils sont lus par les modèles). Les messages de commit existants sont en anglais.
-- Serveur : guillemets doubles, virgules finales. UI : guillemets simples. Indentation de 2 espaces.
+- Style imposé par Prettier (`.prettierrc` à la racine) : tabulations, guillemets doubles, virgules finales, 120
+  colonnes, un attribut par ligne dans les templates. YAML en 2 espaces (override). Ne pas formater à la main.
+- `any` interdit (`@typescript-eslint/no-explicit-any`) ; composants Angular en `OnPush`.
 - `ui/src/app/models.ts` **duplique** les types de `server/src/schema.ts` : à modifier ensemble, à la main.
 - Après un changement de comportement visible (variable `AQ_*`, outil, flux), mettre le README à jour.
 

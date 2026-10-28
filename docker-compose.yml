@@ -13,7 +13,13 @@ services:
     volumes:
       - aq-data:/data
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4317/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4317/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,11 +29,11 @@ services:
     image: ghcr.io/ggml-org/llama.cpp:server
     restart: unless-stopped
     environment:
-      LLAMA_CACHE: /models        # le modèle téléchargé survit aux recréations du conteneur
+      LLAMA_CACHE: /models # le modèle téléchargé survit aux recréations du conteneur
     command:
       - "-hf"
       - "NobodyWho/Mistral_Ministral-3-8B-Instruct-GGUF:Q4_K_M"
-      - "--jinja"                 # indispensable pour l'appel d'outils
+      - "--jinja" # indispensable pour l'appel d'outils
       - "--host"
       - "0.0.0.0"
       - "--port"
@@ -36,7 +42,7 @@ services:
       - "8192"
       - "-t"
       - "8"
-      - "--webui-mcp-proxy"     # à activer seulement si le navigateur est bloqué par CORS
+      - "--webui-mcp-proxy" # à activer seulement si le navigateur est bloqué par CORS
     ports:
       - "127.0.0.1:8080:8080"
     volumes:

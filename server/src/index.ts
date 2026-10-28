@@ -6,17 +6,17 @@ import { SessionStore } from "./sessions.js";
 const cfg = loadConfig();
 
 if (process.argv.includes("--stdio")) {
-  // Mode client MCP (Claude Code, Codex…) : relaie vers le serveur HTTP, qu'il démarre au besoin.
-  // stdout est réservé au JSON-RPC : aucun console.log ici.
-  const { runStdio } = await import("./stdio.js");
-  await runStdio(cfg, fileURLToPath(import.meta.url));
+	// Mode client MCP (Claude Code, Codex…) : relaie vers le serveur HTTP, qu'il démarre au besoin.
+	// stdout est réservé au JSON-RPC : aucun console.log ici.
+	const { runStdio } = await import("./stdio.js");
+	await runStdio(cfg, fileURLToPath(import.meta.url));
 } else {
-  const store = new SessionStore(cfg.dbFile);
-  const app = await buildApp(store, cfg);
+	const store = new SessionStore(cfg.dbFile);
+	const app = await buildApp(store, cfg);
 
-  await app.listen({ host: cfg.host, port: cfg.port });
+	await app.listen({ host: cfg.host, port: cfg.port });
 
-  console.log(`
+	console.log(`
 Agent Questions prêt.
   UI        ${cfg.baseUrl}
   MCP       ${cfg.baseUrl}/mcp   (Streamable HTTP)
