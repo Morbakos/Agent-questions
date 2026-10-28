@@ -51,7 +51,6 @@ import { MarkdownPipe } from './markdown.pipe';
               <span class="other-label">Autre</span>
               <textarea
                 class="field"
-                type="text"
                 placeholder="Précisez…"
                 [value]="answer().text"
                 (input)="setOther($any($event.target).value)"

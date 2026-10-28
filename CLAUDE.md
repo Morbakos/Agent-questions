@@ -17,13 +17,13 @@ Monorepo npm (workspaces `server` et `ui`), Node ≥ 22.13, TypeScript strict.
   - `src/stdio.ts` : mode stdio (relais, voir plus bas).
   - `src/schema.ts` : schémas zod des questions et réponses, validation des réponses.
   - `src/config.ts` : variables d'environnement `AQ_*`. `src/open.ts` : ouverture du navigateur.
-- `ui/` : Angular 20, composants standalone, signals, rendu markdown avec `marked`. Routes : `/` (liste des questions
+- `ui/` : Angular 21.1, composants standalone, signals, rendu markdown avec `marked`. Routes : `/` (liste des questions
   en attente, rafraîchie toutes les 5 s) et `/s/:id` (formulaire d'une session). Styles globaux dans `src/styles.css`.
 
 ## Commandes
 
 ```bash
-npm install
+npm install --legacy-peer-deps   # sans le flag, npm 10.9 plante (« edgesOut ») sur les peers d'Angular 21
 npm run build              # UI puis serveur (l'UI est lente à compiler)
 npm run build -w server    # serveur seul : sert aussi de vérification de types
 npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
