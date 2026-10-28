@@ -14,7 +14,13 @@ Monorepo npm (workspaces `packages/shared`, `packages/server` et `packages/ui`),
   (contrat de l'API de l'UI : `SessionView`, `SessionSummary`, `ApiError`). Compilé par `tsc` vers `dist`. L'UI
   l'importe en `import type` et n'utilise à l'exécution que `answers.ts` (`sideEffects: false` : zod n'entre pas dans
   le bundle).
-- `packages/server/` : Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
+- `packages/server/` (`@morbakos/agent-questions`, **seul paquet publiable**, sur GitHub Packages) : le build
+  (`scripts/build-server.mjs` à la racine) bundle `src/index.ts` avec esbuild en un seul `dist/index.js` (avec shebang, champ `bin`) :
+  `shared` y est inliné (donc devDependency), les `dependencies` restent externes ; l'UI est copiée dans `dist/ui`
+  (`uiDir` par défaut, avec repli sur le build de `@agent-questions/ui`, déclaré en devDependency et exposé par son
+  `exports`). Le build échoue si l'UI n'est pas construite ; `npm run typecheck -w @morbakos/agent-questions` vérifie
+  seulement les types. `shared` et `ui` restent privés.
+  Publier : voir « Publication » du README. Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
   dépendance native). ESM `NodeNext` : les imports relatifs portent l'extension `.js`.
   - `src/index.ts` : point d'entrée. Sans option, démarre le serveur HTTP. Avec `--stdio`, lance le relais.
   - `src/http.ts` : assemble Fastify (garde, gestion d'erreurs, routes). `src/routes/` : `guard.ts` (Host/Origin,
@@ -52,7 +58,8 @@ Créer `packages/ui/src/app/features/<nom>/`, puis une entrée `loadComponent` d
 ```bash
 npm install --legacy-peer-deps   # sans le flag, npm 10.9 plante (« edgesOut ») sur les peers d'Angular 21
 npm run build              # shared, UI puis serveur (l'UI est lente à compiler)
-npm run build -w @agent-questions/server    # serveur seul : sert aussi de vérification de types (shared doit être construit)
+npm run build -w @morbakos/agent-questions  # serveur seul : types puis bundle esbuild dans dist/, UI copiée dans dist/ui (shared et UI doivent être construits)
+npm run typecheck -w @morbakos/agent-questions  # vérification de types seule (shared doit être construit)
 npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
 npm run dev:ui             # construit shared puis ng serve sur :4200, proxy /api vers :4317
 npm run dev:shared         # tsc --watch sur shared (si vous le modifiez pendant un dev:ui / dev:server)
@@ -63,7 +70,7 @@ npm run format             # Prettier (format:check pour vérifier sans écrire)
 ```
 
 `npm run dev:server` utilise la syntaxe `AQ_DEV=1 …` de bash : sous PowerShell, faire
-`npm run build -w @agent-questions/shared; $env:AQ_DEV="1"; npm run dev -w @agent-questions/server`.
+`npm run build -w @agent-questions/shared; $env:AQ_DEV="1"; npm run dev -w @morbakos/agent-questions`.
 
 ## Tests
 

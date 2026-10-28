@@ -43,18 +43,28 @@ Pour inciter l'agent à l'utiliser, ajoutez dans `CLAUDE.md` / `AGENTS.md` :
 Le serveur se lance aussi comme un serveur MCP « classique » (stdio) : le client le démarre lui-même, il n'y a rien à
 lancer à la main.
 
+Le paquet est publié sur GitHub Packages (`@morbakos/agent-questions`). GitHub Packages exige une authentification même pour
+lire un paquet public : créez un jeton (classic) avec le droit `read:packages`, puis ajoutez dans votre `~/.npmrc` :
+
+```ini
+@morbakos:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=ghp_votre_jeton
+```
+
 ```bash
-npm install --legacy-peer-deps && npm run build
-claude mcp add agent-questions -- node /chemin/absolu/packages/server/dist/index.js --stdio
+claude mcp add agent-questions -- npx -y @morbakos/agent-questions --stdio
 ```
 
 Codex (`~/.codex/config.toml`) :
 
 ```toml
 [mcp_servers.agent-questions]
-command = "node"
-args = ["/chemin/absolu/packages/server/dist/index.js", "--stdio"]
+command = "npx"
+args = ["-y", "@morbakos/agent-questions", "--stdio"]
 ```
+
+Depuis un clone du dépôt, remplacez la commande par `node /chemin/absolu/packages/server/dist/index.js --stdio`
+(après `npm install --legacy-peer-deps && npm run build`).
 
 Le mode `--stdio` ne contient aucune logique : il vérifie qu'un serveur HTTP répond sur `AQ_PORT` (4317 par défaut),
 le démarre sinon (processus détaché, journal dans `<AQ_DATA_DIR>/daemon.log`), puis relaie les messages MCP vers
@@ -94,6 +104,16 @@ Si l'agent a perdu ce `session_id` (appel coupé avant de l'avoir reçu, nouvell
 ```bash
 docker compose up -d --build agent-questions
 ```
+
+Ou l'image publiée sur GitHub Container Registry (la base SQLite est dans le volume `/data`) :
+
+```bash
+docker run -d --name agent-questions -p 127.0.0.1:4317:4317 -v aq-data:/data ghcr.io/morbakos/agent-questions:latest
+claude mcp add --transport http agent-questions http://127.0.0.1:4317/mcp
+```
+
+Pour un autre port côté hôte, passez-le aussi au serveur (`-e AQ_PORT=4318 -p 127.0.0.1:4318:4318`) : le serveur
+refuse les requêtes dont l'en-tête `Host` ne correspond pas à son port (`Host non autorisé`).
 
 - Open WebUI (v0.6.31 et plus récent d'après sa documentation) se connecte directement à un serveur MCP
   Streamable HTTP : URL `http://agent-questions:4317/mcp`. Les conteneurs doivent partager un réseau Docker.
@@ -179,7 +199,7 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 | `AQ_ALLOWED_HOSTS` | | Noms d'hôte supplémentaires acceptés (séparés par des virgules) |
 | `AQ_ALLOWED_ORIGINS` | | Origines `http://hôte:port` supplémentaires autorisées à appeler `/mcp` depuis un navigateur (séparées par des virgules), ex. l'interface de llama-server. Jamais `*` : le serveur n'a pas d'authentification |
 | `AQ_PUBLIC_URL` | `http://127.0.0.1:<port>` | URL de l'UI vue par le navigateur |
-| `AQ_UI_DIR` | `packages/ui/dist/ui/browser` | Dossier de l'UI construite |
+| `AQ_UI_DIR` | `dist/ui` du paquet (ou `packages/ui/dist/ui/browser` dans le dépôt) | Dossier de l'UI construite |
 | `AQ_DEV` | | `1` pour accepter l'origine du `ng serve` |
 
 ## Limites connues
@@ -189,3 +209,22 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 - Si le client MCP coupe les appels longs avant `AQ_WAIT_SECONDS`, baissez cette valeur ou réglez le timeout côté client.
 - Après un timeout, l'agent ne sait pas que vous avez répondu : demandez-lui de récupérer les réponses
   (`get_answers` avec le `session_id`, présent dans l'URL du formulaire).
+
+## Publication
+
+Le seul paquet publié est `@morbakos/agent-questions` (`packages/server`) : `dist/index.js` est un bundle esbuild qui
+inline `@agent-questions/shared`, et l'UI construite est copiée dans `dist/ui`. Les autres paquets restent privés.
+
+```bash
+npm run build                                   # shared, UI puis bundle du serveur
+npm pack --dry-run -w @morbakos/agent-questions # vérifier le contenu du tarball
+npm login --registry=https://npm.pkg.github.com # jeton avec le droit write:packages
+npm publish -w @morbakos/agent-questions
+```
+
+`prepublishOnly` reconstruit le bundle et refuse de publier si l'UI n'est pas construite. Incrémentez `version` dans
+`packages/server/package.json` avant chaque publication.
+
+## Licence
+
+[MIT](LICENSE)

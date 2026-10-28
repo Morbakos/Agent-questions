@@ -9,6 +9,10 @@
 		"watch": "ng build --watch --configuration development"
 	},
 	"private": true,
+	"exports": {
+		"./package.json": "./package.json",
+		"./browser/*": "./dist/ui/browser/*"
+	},
 	"dependencies": {
 		"@agent-questions/shared": "*",
 		"@angular/common": "~21.1.0",

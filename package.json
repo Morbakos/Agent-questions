@@ -10,10 +10,10 @@
 		"node": ">=22.13"
 	},
 	"scripts": {
-		"build": "npm run build -w @agent-questions/shared && npm run build -w @agent-questions/ui && npm run build -w @agent-questions/server",
-		"start": "npm run start -w @agent-questions/server",
+		"build": "npm run build -w @agent-questions/shared && npm run build -w @agent-questions/ui && npm run build -w @morbakos/agent-questions",
+		"start": "npm run start -w @morbakos/agent-questions",
 		"dev:shared": "npm run watch -w @agent-questions/shared",
-		"dev:server": "npm run build -w @agent-questions/shared && AQ_DEV=1 npm run dev -w @agent-questions/server",
+		"dev:server": "npm run build -w @agent-questions/shared && AQ_DEV=1 npm run dev -w @morbakos/agent-questions",
 		"dev:ui": "npm run build -w @agent-questions/shared && npm run start -w @agent-questions/ui",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
@@ -25,6 +25,7 @@
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",
 		"angular-eslint": "^21.4.0",
+		"esbuild": "^0.27.2",
 		"eslint": "^9.39.5",
 		"eslint-config-prettier": "^10.1.8",
 		"globals": "^17.13.0",

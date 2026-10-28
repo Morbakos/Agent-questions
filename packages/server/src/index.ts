@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { buildApp } from "./http.js";

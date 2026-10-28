@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
+import { createRequire } from "node:module";
 import { homedir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 export interface AppConfig {
@@ -20,6 +22,17 @@ export interface AppConfig {
 	dev: boolean;
 }
 
+/** Paquet publié : l'UI est copiée dans `dist/ui`. Monorepo (dev, tests) : build du paquet `@agent-questions/ui`. */
+function defaultUiDir(here: string): string {
+	const bundled = resolve(here, "ui");
+	if (existsSync(bundled)) return bundled;
+	try {
+		return dirname(createRequire(import.meta.url).resolve("@agent-questions/ui/browser/index.html"));
+	} catch {
+		return bundled; // UI absente : registerStaticUi affiche un message
+	}
+}
+
 export function loadConfig(): AppConfig {
 	const host = process.env.AQ_BIND_HOST ?? "127.0.0.1";
 	const port = Number(process.env.AQ_PORT ?? 4317);
@@ -35,7 +48,7 @@ export function loadConfig(): AppConfig {
 		baseUrl: (process.env.AQ_PUBLIC_URL ?? `http://127.0.0.1:${port}`).replace(/\/+$/, ""),
 		allowedHosts,
 		dbFile: join(dataDir, "agent-questions.sqlite"),
-		uiDir: process.env.AQ_UI_DIR ?? resolve(here, "../../ui/dist/ui/browser"),
+		uiDir: process.env.AQ_UI_DIR ?? defaultUiDir(here),
 		defaultWaitSeconds: Number(process.env.AQ_WAIT_SECONDS ?? 480),
 		noOpen: process.env.AQ_NO_OPEN === "1",
 		dev: process.env.AQ_DEV === "1",
