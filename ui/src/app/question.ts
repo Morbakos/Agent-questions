@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, input, output } from "@angular/core";
-import { Answer, Question } from "./models";
+import type { Answer, Question } from "@agent-questions/shared";
 import { MarkdownPipe } from "./markdown.pipe";
 
 const textOf = (event: Event): string => (event.target as HTMLTextAreaElement).value;

@@ -1,10 +1,12 @@
-# --- Build : UI Angular + serveur TypeScript
+# --- Build : paquet partagé, UI Angular, serveur TypeScript
 FROM node:24-slim AS build
 WORKDIR /app
 COPY package.json ./
+COPY shared/package.json shared/
 COPY server/package.json server/
 COPY ui/package.json ui/
-RUN npm install
+# --legacy-peer-deps : sans lui, npm 10.9 plante sur les peer dependencies d'Angular 21
+RUN npm install --legacy-peer-deps
 COPY . .
 RUN npm run build
 
@@ -16,9 +18,11 @@ ENV NODE_ENV=production \
     AQ_NO_OPEN=1 \
     AQ_DATA_DIR=/data
 COPY package.json ./
+COPY shared/package.json shared/
 COPY server/package.json server/
 COPY ui/package.json ui/
-RUN npm install --omit=dev -w server
+RUN npm install --omit=dev --legacy-peer-deps -w server
+COPY --from=build /app/shared/dist shared/dist
 COPY --from=build /app/server/dist server/dist
 COPY --from=build /app/ui/dist ui/dist
 VOLUME /data

@@ -3,13 +3,17 @@ import { HttpErrorResponse } from "@angular/common/http";
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import { ApiService } from "./api";
-import { Answer, Answers, Question, SessionView, emptyAnswer, isAnswered, isRequired } from "./models";
+import {
+	type Answer,
+	type Answers,
+	type ApiError,
+	type Question,
+	type SessionView,
+	emptyAnswer,
+	isAnswered,
+	isRequired,
+} from "@agent-questions/shared";
 import { QuestionComponent } from "./question";
-
-interface ApiError {
-	error?: string;
-	details?: string[];
-}
 
 type ViewState = "loading" | "missing" | "ready" | "answered" | "declined";
 

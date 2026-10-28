@@ -9,6 +9,7 @@
 	},
 	"private": true,
 	"dependencies": {
+		"@agent-questions/shared": "*",
 		"@angular/common": "~21.1.0",
 		"@angular/compiler": "~21.1.0",
 		"@angular/core": "~21.1.0",

@@ -1,7 +1,7 @@
 import { HttpClient } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
-import { Answers, SessionSummary, SessionView } from "./models";
+import type { Answers, SessionSummary, SessionView } from "@agent-questions/shared";
 
 @Injectable({ providedIn: "root" })
 export class ApiService {

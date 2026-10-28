@@ -2,7 +2,7 @@ import { DatePipe } from "@angular/common";
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from "@angular/core";
 import { RouterLink } from "@angular/router";
 import { ApiService } from "./api";
-import { SessionSummary } from "./models";
+import type { SessionSummary } from "@agent-questions/shared";
 
 @Component({
 	selector: "app-home",

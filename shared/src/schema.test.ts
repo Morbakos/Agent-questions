@@ -1,6 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { QuestionSchema, isAnswered, validateAnswers } from "./schema.js";
-import { singleQuestion, textQuestion } from "./test-helpers.js";
+import { isAnswered, validateAnswers } from "./answers.js";
+import { type Question, QuestionSchema } from "./schema.js";
+
+const singleQuestion = (overrides: Partial<Question> = {}): Question => ({
+	id: "choix",
+	prompt: "Lequel ?",
+	type: "single",
+	options: [
+		{ id: "a", label: "A", recommended: true },
+		{ id: "b", label: "B" },
+	],
+	...overrides,
+});
+
+const textQuestion = (overrides: Partial<Question> = {}): Question => ({
+	id: "libre",
+	prompt: "Pourquoi ?",
+	type: "text",
+	...overrides,
+});
 
 describe("QuestionSchema", () => {
 	it("accepte une question à choix unique avec une option recommandée", () => {

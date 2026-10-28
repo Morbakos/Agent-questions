@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { AnswersSchema } from "../schema.js";
+import { AnswersSchema } from "@agent-questions/shared";
 import { HttpError, type SessionStore } from "../sessions.js";
 import { summary, view } from "./views.js";
 

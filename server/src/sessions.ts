@@ -4,9 +4,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { migrate } from "./db/migrations.js";
-import { type Answers, type Question, validateAnswers } from "./schema.js";
-
-export type Status = "pending" | "answered" | "declined";
+import { type Answers, type Question, type Status, validateAnswers } from "@agent-questions/shared";
 
 export interface Session {
 	id: string;

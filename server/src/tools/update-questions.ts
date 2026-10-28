@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { QuestionSchema } from "../schema.js";
+import { QuestionSchema } from "@agent-questions/shared";
 import type { ToolContext } from "./context.js";
 import { waitAndRespond, waitSecondsField } from "./respond.js";
 

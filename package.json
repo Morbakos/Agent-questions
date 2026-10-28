@@ -4,6 +4,7 @@
 	"private": true,
 	"description": "Interface web pour poser des questions complexes à l'utilisateur depuis un agent (serveur MCP Streamable HTTP + UI Angular + SQLite).",
 	"workspaces": [
+		"shared",
 		"server",
 		"ui"
 	],
@@ -11,16 +12,16 @@
 		"node": ">=22.13"
 	},
 	"scripts": {
-		"build": "npm run build -w ui && npm run build -w server",
+		"build": "npm run build -w shared && npm run build -w ui && npm run build -w server",
 		"start": "npm run start -w server",
-		"dev:server": "AQ_DEV=1 npm run dev -w server",
-		"dev:ui": "npm run start -w ui",
+		"dev:shared": "npm run watch -w shared",
+		"dev:server": "npm run build -w shared && AQ_DEV=1 npm run dev -w server",
+		"dev:ui": "npm run build -w shared && npm run start -w ui",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
-		"test": "vitest run && npm run test -w ui",
-		"test:server": "vitest run"
+		"test": "vitest run"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",

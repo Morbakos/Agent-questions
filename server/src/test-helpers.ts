@@ -1,5 +1,5 @@
 import type { AppConfig } from "./config.js";
-import type { Question } from "./schema.js";
+import type { Question } from "@agent-questions/shared";
 
 /** Configuration de test : jamais d'ouverture du navigateur, base en mémoire. */
 export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
