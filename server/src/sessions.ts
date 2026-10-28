@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { migrate } from "./db/migrations.js";
 import { type Answers, type Question, validateAnswers } from "./schema.js";
 
 export type Status = "pending" | "answered" | "declined";
@@ -61,29 +62,8 @@ export class SessionStore {
 		mkdirSync(dirname(file), { recursive: true });
 		this.db = new DatabaseSync(file);
 		this.events.setMaxListeners(0);
-		this.db.exec(`
-      PRAGMA journal_mode = WAL;
-      CREATE TABLE IF NOT EXISTS sessions (
-        id             TEXT PRIMARY KEY,
-        hash           TEXT NOT NULL,
-        title          TEXT NOT NULL,
-        questions      TEXT NOT NULL,
-        draft          TEXT NOT NULL DEFAULT '{}',
-        answers        TEXT,
-        status         TEXT NOT NULL DEFAULT 'pending',
-        decline_reason TEXT,
-        created_at     INTEGER NOT NULL,
-        answered_at    INTEGER,
-        delivered_at   INTEGER,
-        last_seen_at   INTEGER
-      );
-      CREATE INDEX IF NOT EXISTS idx_sessions_hash ON sessions(hash);
-    `);
-		// Migration des bases créées avant l'édition des questions.
-		const cols = this.all<{ name: string }>("PRAGMA table_info(sessions)");
-		if (!cols.some((c) => c.name === "revision")) {
-			this.db.exec("ALTER TABLE sessions ADD COLUMN revision INTEGER NOT NULL DEFAULT 0");
-		}
+		this.db.exec("PRAGMA journal_mode = WAL");
+		migrate(this.db);
 	}
 
 	// node:sqlite type les lignes en Record<string, SQLOutputValue> : on les type ici, une seule fois.
