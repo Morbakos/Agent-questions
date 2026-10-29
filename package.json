@@ -1,6 +1,6 @@
 {
 	"name": "@morbakos/agent-questions",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": false,
 	"description": "Serveur MCP + interface web pour poser des questions longues ou complexes à l'utilisateur depuis un agent.",
 	"workspaces": [
