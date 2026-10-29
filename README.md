@@ -18,7 +18,7 @@ Prérequis : Node ≥ 22.13 (SQLite intégré via `node:sqlite`, aucune dépenda
 ```bash
 npm install --legacy-peer-deps   # le flag contourne un bug de npm 10.9 avec les peers d'Angular 21
 npm run build
-npm start            # UI + MCP sur http://127.0.0.1:4317
+npm start            # bundle racine : UI + MCP sur http://127.0.0.1:4317
 ```
 
 Enregistrer le serveur auprès d'un agent :
@@ -63,7 +63,7 @@ command = "npx"
 args = ["-y", "@morbakos/agent-questions", "--stdio"]
 ```
 
-Depuis un clone du dépôt, remplacez la commande par `node /chemin/absolu/packages/server/dist/index.js --stdio`
+Depuis un clone du dépôt, remplacez la commande par `node /chemin/absolu/dist/index.js --stdio`
 (après `npm install --legacy-peer-deps && npm run build`).
 
 Le mode `--stdio` ne contient aucune logique : il vérifie qu'un serveur HTTP répond sur `AQ_PORT` (4317 par défaut),
@@ -153,7 +153,7 @@ npm run lint         # ESLint
 npm run format       # Prettier (format:check pour vérifier seulement)
 ```
 
-Le dépôt est un monorepo : `packages/shared/` (types et schémas communs), `packages/server/` (MCP, API, SQLite) et `packages/ui/` (Angular).
+Le dépôt est un monorepo : `packages/shared/` (types et schémas communs), `packages/server/` (MCP, API, SQLite) et `packages/ui/` (Angular). Chaque workspace conserve ses scripts et dépendances ; `npm run build` orchestre leurs builds puis génère le bundle distribuable `dist/index.js` et l'UI dans `dist/ui/` à la racine. Le paquet publié sur GitHub Packages est le paquet racine `@morbakos/agent-questions`.
 Les conventions et la marche à suivre pour ajouter un outil MCP sont dans `CLAUDE.md`.
 
 ## Outils MCP
