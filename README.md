@@ -43,7 +43,7 @@ Pour inciter l'agent à l'utiliser, ajoutez dans `CLAUDE.md` / `AGENTS.md` :
 Le serveur se lance aussi comme un serveur MCP « classique » (stdio) : le client le démarre lui-même, il n'y a rien à
 lancer à la main.
 
-Le paquet est publié sur GitHub Packages (`@morbakos/agent-questions`). GitHub Packages exige une authentification même pour
+Le paquet racine `@morbakos/agent-questions` est publié sur GitHub Packages. GitHub Packages exige une authentification même pour
 lire un paquet public : créez un jeton (classic) avec le droit `read:packages`, puis ajoutez dans votre `~/.npmrc` :
 
 ```ini
