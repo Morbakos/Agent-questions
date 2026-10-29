@@ -1,5 +1,5 @@
 {
-	"name": "@morbakos/agent-questions",
+	"name": "@agent-questions/server",
 	"version": "0.1.0",
 	"description": "Serveur MCP + interface web pour poser à l'utilisateur des questions longues ou complexes depuis un agent.",
 	"keywords": [
@@ -19,9 +19,6 @@
 	"homepage": "https://github.com/Morbakos/Agent-questions#readme",
 	"bugs": "https://github.com/Morbakos/Agent-questions/issues",
 	"type": "module",
-	"bin": {
-		"agent-questions": "dist/index.js"
-	},
 	"files": [
 		"dist",
 		"README.md",
@@ -30,15 +27,11 @@
 	"engines": {
 		"node": ">=22.13"
 	},
-	"publishConfig": {
-		"registry": "https://npm.pkg.github.com"
-	},
 	"scripts": {
 		"dev": "tsx watch src/index.ts",
 		"typecheck": "tsc --noEmit",
 		"build": "npm run typecheck && node ../../scripts/build-server.mjs",
-		"start": "node dist/index.js",
-		"prepublishOnly": "node ../../scripts/build-server.mjs"
+		"start": "node dist/index.js"
 	},
 	"dependencies": {
 		"@fastify/static": "^8.0.0",
@@ -52,5 +45,6 @@
 		"@types/node": "^24.0.0",
 		"tsx": "^4.19.0",
 		"typescript": "^5.8.0"
-	}
+	},
+	"private": true
 }
