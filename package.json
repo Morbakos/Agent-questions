@@ -1,8 +1,8 @@
 {
-	"name": "agent-questions",
+	"name": "@morbakos/agent-questions",
 	"version": "0.1.0",
-	"private": true,
-	"description": "Interface web pour poser des questions complexes à l'utilisateur depuis un agent (serveur MCP Streamable HTTP + UI Angular + SQLite).",
+	"private": false,
+	"description": "Serveur MCP + interface web pour poser des questions longues ou complexes à l'utilisateur depuis un agent.",
 	"workspaces": [
 		"packages/*"
 	],
@@ -10,17 +10,18 @@
 		"node": ">=22.13"
 	},
 	"scripts": {
-		"build": "npm run build -w @agent-questions/shared && npm run build -w @agent-questions/ui && npm run build -w @morbakos/agent-questions",
-		"start": "npm run start -w @morbakos/agent-questions",
+		"build": "npm run build -w @agent-questions/shared && npm run build -w @agent-questions/ui && npm run build -w @agent-questions/server && node scripts/build-root.mjs",
+		"start": "node dist/index.js",
 		"dev:shared": "npm run watch -w @agent-questions/shared",
-		"dev:server": "npm run build -w @agent-questions/shared && AQ_DEV=1 npm run dev -w @morbakos/agent-questions",
+		"dev:server": "npm run build -w @agent-questions/shared && AQ_DEV=1 npm run dev -w @agent-questions/server",
 		"dev:ui": "npm run build -w @agent-questions/shared && npm run start -w @agent-questions/ui",
 		"lint": "eslint .",
 		"lint:fix": "eslint . --fix",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"test": "vitest run && npm run test -w @agent-questions/ui",
-		"test:server": "vitest run"
+		"test:server": "vitest run",
+		"prepublishOnly": "npm run build"
 	},
 	"devDependencies": {
 		"@eslint/js": "^9.39.5",
@@ -32,5 +33,27 @@
 		"prettier": "^3.9.10",
 		"typescript-eslint": "^8.72.1",
 		"vitest": "^5.0.5"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Morbakos/Agent-questions.git"
+	},
+	"homepage": "https://github.com/Morbakos/Agent-questions#readme",
+	"bugs": "https://github.com/Morbakos/Agent-questions/issues",
+	"license": "MIT",
+	"author": "Alexis Jacob",
+	"bin": {
+		"agent-questions": "./dist/index.js"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"dependencies": {
+		"@fastify/static": "^8.0.0",
+		"@modelcontextprotocol/sdk": "^1.12.0",
+		"fastify": "^5.0.0",
+		"zod": "^3.25.0"
 	}
 }
