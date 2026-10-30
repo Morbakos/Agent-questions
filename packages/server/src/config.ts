@@ -25,7 +25,9 @@ export interface AppConfig {
 /** Paquet publié : l'UI est copiée dans `dist/ui`. Monorepo (dev, tests) : build du paquet `@agent-questions/ui`. */
 function defaultUiDir(here: string): string {
 	const bundled = resolve(here, "ui");
-	if (existsSync(bundled)) return bundled;
+	if (existsSync(bundled)) {
+		return bundled;
+	}
 	try {
 		return dirname(createRequire(import.meta.url).resolve("@agent-questions/ui/browser/index.html"));
 	} catch {

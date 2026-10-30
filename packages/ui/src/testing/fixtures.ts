@@ -47,7 +47,9 @@ export const sessionView = (overrides: Partial<SessionView> = {}): SessionView =
 export const sessionSummary = (overrides: Partial<SessionSummary> = {}): SessionSummary => ({
 	id: "s1",
 	title: "Ma session",
+	status: "pending",
 	createdAt: new Date(2026, 9, 28, 14, 30).getTime(),
+	answeredAt: null,
 	questionCount: 2,
 	...overrides,
 });
@@ -56,6 +58,7 @@ export const sessionSummary = (overrides: Partial<SessionSummary> = {}): Session
 export function apiMock() {
 	return {
 		list: vi.fn<ApiService["list"]>(),
+		history: vi.fn<ApiService["history"]>().mockResolvedValue({ items: [], nextBefore: null }),
 		get: vi.fn<ApiService["get"]>(),
 		saveDraft: vi.fn<ApiService["saveDraft"]>().mockResolvedValue({}),
 		submit: vi.fn<ApiService["submit"]>().mockResolvedValue({}),

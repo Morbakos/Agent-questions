@@ -28,14 +28,16 @@ Monorepo npm (workspaces `packages/shared`, `packages/server` et `packages/ui`),
   - `src/mcp.ts` : assemble le serveur MCP. `src/tools/` : **un fichier par outil** (`ask-user.ts`,
     `update-questions.ts`, `get-answers.ts`) qui exporte `registerXxx(server, ctx)` ; `respond.ts` regroupe les helpers
     communs (attente, réponse, ouverture du navigateur), `context.ts` le contexte injecté.
-  - `src/sessions.ts` : `SessionStore` (requêtes SQLite + attente des réponses). `src/db/migrations.ts` : migrations
+  - `src/session-store.ts` : `SessionStore` (requêtes SQLite + attente des réponses). `src/db/migrations.ts` : migrations
     ordonnées, version dans `PRAGMA user_version`.
   - `src/stdio.ts` : mode stdio (relais, voir plus bas).
   - `src/config.ts` : variables d'environnement `AQ_*`. `src/open.ts` : ouverture du navigateur.
 - `packages/ui/` : Angular 21.1, composants standalone, signals, `OnPush`, styles en SCSS, rendu markdown avec `marked`.
   - `src/app/core/` (`api.ts`, `app.config.ts`), `src/app/shared/` (`markdown.pipe.ts`), `src/app/features/home/`
-    (liste des questions en attente, rafraîchie toutes les 5 s), `src/app/features/session/` (formulaire :
-    `session.ts` + `session.html`, `question.ts`, `session-state.ts` qui porte l'état, le brouillon et le sondage).
+    (liste des questions en attente, rafraîchie toutes les 5 s, et historique paginé par curseur `before` sur
+    `GET /api/sessions/history`, 50 par page), `src/app/features/session/` (formulaire :
+    `session.ts` + `session.html`, `question.ts`, `session-state.ts` qui porte l'état, le brouillon et le sondage ;
+    une session déjà clôturée s'ouvre en lecture seule, état `closed`).
     Les routes (`app.routes.ts`) sont chargées à la demande (`loadComponent`).
   - Styles : `src/styles.scss` ne fait que `@use` les partiels de `src/styles/` (jetons de thème clair/sombre en
     variables CSS, base, formulaires, markdown). Le reste vit dans le `.scss` du composant. Le markdown injecté par
@@ -75,7 +77,7 @@ npm run format             # Prettier (format:check pour vérifier sans écrire)
 ## Tests
 
 - Serveur et `shared` : Vitest (`vitest.config.ts` à la racine, qui lit les sources de `shared` sans le compiler).
-  `schema.test.ts`, `sessions.test.ts` (base en mémoire, dont la migration d'une ancienne base), `db/migrations.test.ts`,
+  `schema.test.ts`, `session-store.test.ts` (base en mémoire, dont la migration d'une ancienne base), `db/migrations.test.ts`,
   `http.test.ts` (`fastify.inject`, sans port), `mcp.test.ts` (client MCP relié en mémoire au serveur, sans réseau).
   `src/test-helpers.ts` : `testConfig()` force `noOpen: true`, **ne jamais le désactiver dans un test** (le navigateur
   s'ouvrirait).

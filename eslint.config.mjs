@@ -42,4 +42,10 @@ export default tseslint.config(
 
 	// Désactive les règles de style en conflit avec Prettier (toujours en dernier).
 	prettier,
+
+	// Après `prettier`, qui désactive `curly` : seule l'option "all" est compatible avec Prettier.
+	{
+		files: ["packages/**/*.ts"],
+		rules: { curly: ["error", "all"] },
+	},
 );

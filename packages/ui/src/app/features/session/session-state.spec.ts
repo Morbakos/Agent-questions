@@ -49,10 +49,16 @@ describe("SessionState", () => {
 			expect(state.answers()["libre"]).toEqual({ selected: [], text: "" });
 		});
 
-		it.each(["answered", "declined"] as const)("affiche l'état final d'une session déjà %s", async (status) => {
-			await ready(sessionView({ status }));
-			expect(state.state()).toBe(status);
-		});
+		it.each(["answered", "declined"] as const)(
+			"ouvre une session déjà %s en lecture seule, sans sondage",
+			async (status) => {
+				await ready(sessionView({ status }));
+				expect(state.state()).toBe("closed");
+				expect(state.session()?.status).toBe(status);
+				await vi.advanceTimersByTimeAsync(POLL_MS * 2);
+				expect(api.get).toHaveBeenCalledTimes(1);
+			},
+		);
 
 		it("passe à « missing » quand la session est introuvable", async () => {
 			api.get.mockRejectedValue(new HttpErrorResponse({ status: 404 }));

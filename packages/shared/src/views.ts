@@ -18,8 +18,18 @@ export interface SessionView {
 export interface SessionSummary {
 	id: string;
 	title: string;
+	status: Status;
 	createdAt: number;
+	/** Date de la réponse ou du refus ; `null` tant que la session est en attente. */
+	answeredAt: number | null;
 	questionCount: number;
+}
+
+/** Une page de l'historique (sessions clôturées, plus récentes d'abord). */
+export interface SessionHistory {
+	items: SessionSummary[];
+	/** À passer en `before` pour obtenir la page suivante ; `null` à la dernière page. */
+	nextBefore: number | null;
 }
 
 /** Corps d'erreur de l'API de l'UI. */

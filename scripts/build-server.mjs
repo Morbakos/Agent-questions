@@ -34,6 +34,7 @@ await build({
 	// Seules les dépendances de production restent externes ; @agent-questions/shared est inliné.
 	external: Object.keys(pkg.dependencies),
 	logLevel: "info",
+	minify: true,
 });
 
 await cp(uiSource, server("dist/ui"), { recursive: true });

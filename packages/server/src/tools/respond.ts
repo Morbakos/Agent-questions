@@ -2,7 +2,7 @@ import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/proto
 import type { ServerNotification, ServerRequest } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { openInBrowser } from "../open.js";
-import type { Session } from "../sessions.js";
+import type { Session } from "../session-store.js";
 import type { ToolContext } from "./context.js";
 
 /** Objet `extra` fourni par le SDK à chaque appel d'outil. */
@@ -11,7 +11,7 @@ export type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 const lastOpened = new Map<string, number>();
 
 const json = (value: unknown) => ({
-	content: [{ type: "text" as const, text: JSON.stringify(value, null, 2) }],
+	content: [{ type: "text" as const, text: JSON.stringify(value) }],
 });
 
 export const urlOf = ({ cfg }: ToolContext, s: Session) => `${cfg.baseUrl}/s/${s.id}`;
@@ -31,11 +31,15 @@ export function waitSecondsField({ cfg }: ToolContext, extraAdvice: string) {
 
 /** Ouvre le navigateur sauf si la page est déjà ouverte (vue récemment) ou vient d'être ouverte. */
 function maybeOpen(ctx: ToolContext, s: Session): void {
-	if (ctx.cfg.noOpen || s.status !== "pending") return;
+	if (ctx.cfg.noOpen || s.status !== "pending") {
+		return;
+	}
 	const now = Date.now();
 	const seenRecently = s.lastSeenAt !== null && now - s.lastSeenAt < 60_000;
 	const openedRecently = now - (lastOpened.get(s.id) ?? 0) < 120_000;
-	if (seenRecently || openedRecently) return;
+	if (seenRecently || openedRecently) {
+		return;
+	}
 	lastOpened.set(s.id, now);
 	openInBrowser(urlOf(ctx, s));
 }
@@ -84,7 +88,9 @@ export async function waitAndRespond(ctx: ToolContext, s: Session, waitSeconds: 
 	maybeOpen(ctx, s);
 	const token = extra._meta?.progressToken;
 	const notify = (progress: number, message: string) => {
-		if (token === undefined) return;
+		if (token === undefined) {
+			return;
+		}
 		extra
 			.sendNotification({
 				method: "notifications/progress",

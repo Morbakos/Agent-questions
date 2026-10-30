@@ -2,7 +2,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import type { FastifyInstance, FastifyReply } from "fastify";
 import type { AppConfig } from "../config.js";
 import { createMcpServer } from "../mcp.js";
-import type { SessionStore } from "../sessions.js";
+import type { SessionStore } from "../session-store.js";
 
 /** Endpoint MCP (Streamable HTTP, sans état : un serveur et un transport par requête). */
 export function registerMcpRoutes(app: FastifyInstance, store: SessionStore, cfg: AppConfig): void {

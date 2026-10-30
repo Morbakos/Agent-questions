@@ -31,7 +31,9 @@ export function registerAskUser(server: McpServer, ctx: ToolContext): void {
 		},
 		async ({ title, questions, session_id, wait_seconds }, extra) => {
 			const ids = questions.map((q) => q.id);
-			if (new Set(ids).size !== ids.length) throw new Error("Duplicate question ids");
+			if (new Set(ids).size !== ids.length) {
+				throw new Error("Duplicate question ids");
+			}
 			const { session } = ctx.store.findOrCreate({
 				sessionId: session_id,
 				title: title ?? "Questions de l'agent",

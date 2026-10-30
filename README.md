@@ -91,10 +91,14 @@ l'agent reçoit `pending` ou une erreur de délai, et rien ne l'avertit que vous
 appel n'est en cours. En revanche, **c'est à vous de demander à l'agent de les récupérer** : écrivez-lui par exemple
 « j'ai répondu, récupère mes réponses ». Il appelle alors `get_answers` avec le `session_id`.
 
+Les sessions passées (répondues ou refusées) restent consultables : la page d'accueil de l'UI les liste sous
+« Historique », 50 par page (« Charger plus »), et un clic affiche les questions avec vos réponses ou votre motif de
+refus, en lecture seule.
+
 Si l'agent a perdu ce `session_id` (appel coupé avant de l'avoir reçu, nouvelle conversation) :
 
-- le `session_id` est dans l'URL de la page du formulaire : `http://127.0.0.1:4317/s/<session_id>`. Vous pouvez le
-  lui donner ;
+- le `session_id` est dans l'URL de la page du formulaire : `http://127.0.0.1:4317/s/<session_id>` (la même page
+  s'ouvre depuis l'historique). Vous pouvez le lui donner ;
 - ou demandez-lui de rappeler `ask_user` avec **exactement le même titre et les mêmes questions** : le serveur
   retrouve la session existante (voir « Reprise idempotente ») et renvoie vos réponses au lieu d'en créer une
   nouvelle. Si l'agent change le titre ou reformule une question, le serveur ouvre une nouvelle session vide.

@@ -22,6 +22,19 @@ describe("ApiService", () => {
 		expect(await result).toEqual([sessionSummary()]);
 	});
 
+	it("lit une page de l'historique, avec ou sans curseur", async () => {
+		const first = api.history();
+		http.expectOne({ method: "GET", url: "/api/sessions/history" }).flush({ items: [], nextBefore: 42 });
+		expect(await first).toEqual({ items: [], nextBefore: 42 });
+
+		const next = api.history(42);
+		http.expectOne({ method: "GET", url: "/api/sessions/history?before=42" }).flush({
+			items: [],
+			nextBefore: null,
+		});
+		await next;
+	});
+
 	it("lit une session", async () => {
 		const result = api.get("s1");
 		http.expectOne({ method: "GET", url: "/api/sessions/s1" }).flush(sessionView());

@@ -3,7 +3,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AppConfig } from "./config.js";
 import { createMcpServer } from "./mcp.js";
-import { SessionStore } from "./sessions.js";
+import { SessionStore } from "./session-store.js";
 import { singleQuestion, testConfig, textQuestion } from "./test-helpers.js";
 
 let store: SessionStore;
@@ -175,7 +175,9 @@ async function waitForRevision(id: string, revision: number): Promise<void> {
 
 async function waitFor(condition: () => boolean): Promise<void> {
 	for (let i = 0; i < 100; i++) {
-		if (condition()) return;
+		if (condition()) {
+			return;
+		}
 		await new Promise((r) => setTimeout(r, 10));
 	}
 	throw new Error("condition jamais remplie");

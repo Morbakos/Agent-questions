@@ -18,7 +18,9 @@ export function registerGetAnswers(server: McpServer, ctx: ToolContext): void {
 		},
 		async ({ session_id, wait_seconds }, extra) => {
 			const session = ctx.store.get(session_id);
-			if (!session) throw new Error(`session_id inconnu : ${session_id}`);
+			if (!session) {
+				throw new Error(`session_id inconnu : ${session_id}`);
+			}
 			return waitAndRespond(ctx, session, wait_seconds, extra);
 		},
 	);

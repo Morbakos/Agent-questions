@@ -2,7 +2,7 @@
 import { fileURLToPath } from "node:url";
 import { loadConfig } from "./config.js";
 import { buildApp } from "./http.js";
-import { SessionStore } from "./sessions.js";
+import { SessionStore } from "./session-store.js";
 
 const cfg = loadConfig();
 

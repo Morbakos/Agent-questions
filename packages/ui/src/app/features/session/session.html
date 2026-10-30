@@ -20,6 +20,49 @@
 			<p>L'agent sait que vous ne souhaitez pas répondre. Vous pouvez fermer cet onglet.</p>
 		</main>
 	}
+	@case ("closed") {
+		@if (s.session(); as session) {
+			<main class="page narrow">
+				<p><a routerLink="/">← Retour à la liste</a></p>
+				<h1>{{ session.title }}</h1>
+				@if (session.status === "declined") {
+					<p
+						class="notice"
+						role="status">
+						Vous avez refusé de répondre
+						@if (session.declineReason) {
+							: {{ session.declineReason }}
+						}
+					</p>
+				}
+				@for (q of session.questions; track q.id) {
+					<section class="past">
+						@if (q.header) {
+							<h2 class="past-head">{{ q.header }}</h2>
+						}
+						<div
+							class="md"
+							[innerHTML]="q.prompt | markdown"></div>
+						@if (session.status === "answered") {
+							@let chosen = chosenLabels(q, session.answers?.[q.id]);
+							@let text = session.answers?.[q.id]?.text;
+							<div class="past-answer">
+								@for (label of chosen; track label) {
+									<p class="past-choice">{{ label }}</p>
+								}
+								@if (text) {
+									<p class="past-text">{{ text }}</p>
+								}
+								@if (chosen.length === 0 && !text) {
+									<p class="muted">Sans réponse.</p>
+								}
+							</div>
+						}
+					</section>
+				}
+			</main>
+		}
+	}
 	@case ("ready") {
 		@if (s.session(); as session) {
 			<div class="layout">

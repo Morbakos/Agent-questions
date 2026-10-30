@@ -12,7 +12,8 @@ import {
 } from "@agent-questions/shared";
 import { ApiService } from "../../core/api";
 
-export type ViewState = "loading" | "missing" | "ready" | "answered" | "declined";
+/** `answered` et `declined` : confirmation juste après l'action ; `closed` : session passée, en lecture seule. */
+export type ViewState = "loading" | "missing" | "ready" | "answered" | "declined" | "closed";
 
 /** Intervalle de détection d'une modification des questions par l'agent. */
 export const POLL_MS = 5000;
@@ -59,9 +60,10 @@ export class SessionState {
 		this.id = id;
 		try {
 			const s = await this.api.get(id);
-			if (s.status === "answered") return this.state.set("answered");
-			if (s.status === "declined") return this.state.set("declined");
 			this.session.set(s);
+			if (s.status !== "pending") {
+				return this.state.set("closed");
+			}
 			this.answers.set(Object.fromEntries(s.questions.map((q) => [q.id, s.draft[q.id] ?? emptyAnswer()])));
 			this.state.set("ready");
 		} catch {
@@ -75,12 +77,20 @@ export class SessionState {
 	/** Détecte une modification des questions par l'agent (ou la clôture de la session) et met la vue à jour. */
 	private async refresh(): Promise<void> {
 		const current = this.session();
-		if (this.state() !== "ready" || !current || this.sending()) return;
+		if (this.state() !== "ready" || !current || this.sending()) {
+			return;
+		}
 		try {
 			const s = await this.api.get(this.id);
-			if (s.status === "answered") return this.state.set("answered");
-			if (s.status === "declined") return this.state.set("declined");
-			if (s.revision === current.revision) return;
+			if (s.status === "answered") {
+				return this.state.set("answered");
+			}
+			if (s.status === "declined") {
+				return this.state.set("declined");
+			}
+			if (s.revision === current.revision) {
+				return;
+			}
 			// Les réponses en cours de saisie priment sur le brouillon, mais seulement pour les options qui existent encore.
 			const local = this.answers();
 			this.answers.set(
@@ -150,7 +160,9 @@ export class SessionState {
 
 	private message(err: unknown, fallback: string): string {
 		const body = err instanceof HttpErrorResponse ? (err.error as ApiError | null) : null;
-		if (body?.details?.length) return `${body.error} : ${body.details.join(" ; ")}`;
+		if (body?.details?.length) {
+			return `${body.error} : ${body.details.join(" ; ")}`;
+		}
 		return body?.error ?? fallback;
 	}
 }

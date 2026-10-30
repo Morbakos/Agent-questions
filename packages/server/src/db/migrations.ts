@@ -46,7 +46,9 @@ const userVersion = (db: DatabaseSync): number =>
  */
 function detectLegacyVersion(db: DatabaseSync): number {
 	const columns = db.prepare("PRAGMA table_info(sessions)").all() as { name: string }[];
-	if (columns.length === 0) return 0;
+	if (columns.length === 0) {
+		return 0;
+	}
 	return columns.some((c) => c.name === "revision") ? 2 : 1;
 }
 
@@ -55,7 +57,9 @@ export function migrate(db: DatabaseSync): void {
 	let current = userVersion(db);
 	if (current === 0) {
 		current = detectLegacyVersion(db);
-		if (current > 0) db.exec(`PRAGMA user_version = ${current}`);
+		if (current > 0) {
+			db.exec(`PRAGMA user_version = ${current}`);
+		}
 	}
 	for (const m of migrations.filter((x) => x.version > current)) {
 		db.exec("BEGIN");

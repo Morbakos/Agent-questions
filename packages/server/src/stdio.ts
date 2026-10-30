@@ -42,7 +42,9 @@ function healthy(port: number, timeoutMs = 800): Promise<boolean> {
 
 /** Démarre le démon HTTP (processus détaché, survit à l'agent) s'il ne répond pas déjà. */
 async function ensureDaemon(cfg: AppConfig, entry: string): Promise<void> {
-	if (await healthy(cfg.port)) return;
+	if (await healthy(cfg.port)) {
+		return;
+	}
 	const dataDir = dirname(cfg.dbFile);
 	mkdirSync(dataDir, { recursive: true });
 	const logFile = join(dataDir, "daemon.log");
@@ -58,7 +60,9 @@ async function ensureDaemon(cfg: AppConfig, entry: string): Promise<void> {
 	log(`serveur HTTP démarré (pid ${child.pid}), journal : ${logFile}`);
 	const deadline = Date.now() + 15_000;
 	while (Date.now() < deadline) {
-		if (await healthy(cfg.port, 500)) return;
+		if (await healthy(cfg.port, 500)) {
+			return;
+		}
 		await sleep(200);
 	}
 	throw new Error(`le serveur HTTP ne répond pas sur le port ${cfg.port} (voir ${logFile})`);
@@ -75,10 +79,14 @@ class HttpFailure extends Error {
 
 /** Émet chaque message JSON-RPC contenu dans un événement SSE ou un corps JSON. */
 function emit(text: string): void {
-	if (!text.trim()) return;
+	if (!text.trim()) {
+		return;
+	}
 	try {
 		const value: unknown = JSON.parse(text);
-		for (const m of Array.isArray(value) ? value : [value]) send(m);
+		for (const m of Array.isArray(value) ? value : [value]) {
+			send(m);
+		}
 	} catch {
 		log("message ignoré (JSON invalide) :", text.slice(0, 200));
 	}
@@ -121,7 +129,9 @@ function relayOnce(
 				let buffer = "";
 				res.on("data", (chunk: string) => {
 					buffer += chunk;
-					if (status >= 400 || !type.includes("text/event-stream")) return;
+					if (status >= 400 || !type.includes("text/event-stream")) {
+						return;
+					}
 					// Un événement SSE se termine par une ligne vide ; ses lignes `data:` forment un message JSON.
 					let sep: number;
 					while ((sep = buffer.search(/\r?\n\r?\n/)) !== -1) {
@@ -131,8 +141,12 @@ function relayOnce(
 					}
 				});
 				res.on("end", () => {
-					if (status >= 400) return reject(new HttpFailure(status, buffer));
-					if (status !== 202) emit(type.includes("text/event-stream") ? sseData(buffer) : buffer);
+					if (status >= 400) {
+						return reject(new HttpFailure(status, buffer));
+					}
+					if (status !== 202) {
+						emit(type.includes("text/event-stream") ? sseData(buffer) : buffer);
+					}
 					resolve();
 				});
 				res.on("error", reject);
@@ -140,9 +154,13 @@ function relayOnce(
 			},
 		);
 		req.on("error", reject);
-		if (key !== null) inflight.set(key, req);
+		if (key !== null) {
+			inflight.set(key, req);
+		}
 		req.on("close", () => {
-			if (key !== null) inflight.delete(key);
+			if (key !== null) {
+				inflight.delete(key);
+			}
 		});
 		req.end(payload);
 	});
@@ -171,23 +189,31 @@ export async function runStdio(cfg: AppConfig, entry: string): Promise<void> {
 			try {
 				await relayOnce(cfg, msg, inflight, key);
 			} catch (e) {
-				if (!isRefused(e)) throw e;
+				if (!isRefused(e)) {
+					throw e;
+				}
 				ready = null; // le démon est tombé entre-temps : on le relance une fois
 				await ensure();
 				await relayOnce(cfg, msg, inflight, key);
 			}
 		} catch (e) {
-			if (key !== null && cancelled.delete(key)) return; // annulé par le client : pas de réponse attendue
+			if (key !== null && cancelled.delete(key)) {
+				return;
+			} // annulé par le client : pas de réponse attendue
 			const message = e instanceof Error ? e.message : String(e);
-			if (isRequest)
+			if (isRequest) {
 				send({ jsonrpc: "2.0", id: msg.id, error: { code: -32000, message: `Agent Questions : ${message}` } });
-			else log(message);
+			} else {
+				log(message);
+			}
 		}
 	}
 
 	const rl = createInterface({ input: process.stdin, crlfDelay: Infinity });
 	rl.on("line", (line) => {
-		if (!line.trim()) return;
+		if (!line.trim()) {
+			return;
+		}
 		let msg: JsonRpcMessage;
 		try {
 			msg = JSON.parse(line) as JsonRpcMessage;
@@ -205,8 +231,12 @@ export async function runStdio(cfg: AppConfig, entry: string): Promise<void> {
 		void relay(msg);
 	});
 	rl.on("close", () => {
-		for (const req of inflight.values()) req.destroy();
+		for (const req of inflight.values()) {
+			req.destroy();
+		}
 		process.exit(0);
 	});
-	for (const sig of ["SIGINT", "SIGTERM"] as const) process.on(sig, () => process.exit(0));
+	for (const sig of ["SIGINT", "SIGTERM"] as const) {
+		process.on(sig, () => process.exit(0));
+	}
 }

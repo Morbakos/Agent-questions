@@ -29,7 +29,9 @@ export const QuestionSchema = z
 		placeholder: z.string().max(200).optional(),
 	})
 	.superRefine((q, ctx) => {
-		if (q.type === "text") return;
+		if (q.type === "text") {
+			return;
+		}
 		const opts = q.options ?? [];
 		if (opts.length < 2) {
 			ctx.addIssue({

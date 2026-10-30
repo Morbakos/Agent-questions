@@ -1,7 +1,7 @@
-import { HttpClient } from "@angular/common/http";
+import { HttpClient, HttpParams } from "@angular/common/http";
 import { Injectable, inject } from "@angular/core";
 import { firstValueFrom } from "rxjs";
-import type { Answers, SessionSummary, SessionView } from "@agent-questions/shared";
+import type { Answers, SessionHistory, SessionSummary, SessionView } from "@agent-questions/shared";
 
 @Injectable({ providedIn: "root" })
 export class ApiService {
@@ -9,6 +9,14 @@ export class ApiService {
 
 	list() {
 		return firstValueFrom(this.http.get<SessionSummary[]>("/api/sessions"));
+	}
+	/** Page de l'historique ; `before` est le curseur `nextBefore` de la page précédente. */
+	history(before?: number) {
+		let params = new HttpParams();
+		if (before !== undefined) {
+			params = params.set("before", before);
+		}
+		return firstValueFrom(this.http.get<SessionHistory>("/api/sessions/history", { params }));
 	}
 	get(id: string) {
 		return firstValueFrom(this.http.get<SessionView>(`/api/sessions/${id}`));

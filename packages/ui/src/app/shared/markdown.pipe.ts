@@ -8,7 +8,9 @@ import { marked } from "marked";
 @Pipe({ name: "markdown" })
 export class MarkdownPipe implements PipeTransform {
 	transform(value: string | undefined | null): string {
-		if (!value) return "";
+		if (!value) {
+			return "";
+		}
 		return marked.parse(value, { async: false, gfm: true }) as string;
 	}
 }

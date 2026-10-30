@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { AppConfig } from "./config.js";
-import type { SessionStore } from "./sessions.js";
+import type { SessionStore } from "./session-store.js";
 import { registerAskUser } from "./tools/ask-user.js";
 import type { ToolContext } from "./tools/context.js";
 import { registerGetAnswers } from "./tools/get-answers.js";

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "./http.js";
-import { SessionStore } from "./sessions.js";
+import { SessionStore } from "./session-store.js";
 import { singleQuestion, testConfig, textQuestion } from "./test-helpers.js";
 
 let app: FastifyInstance;
@@ -61,6 +61,23 @@ describe("API de l'UI", () => {
 		const s = create();
 		const res = await app.inject({ method: "GET", url: "/api/sessions", headers });
 		expect(res.json()).toEqual([expect.objectContaining({ id: s.id, title: "T", questionCount: 2 })]);
+	});
+
+	it("liste l'historique des sessions clôturées, sans les sessions en attente", async () => {
+		const open = create();
+		const closed = store.findOrCreate({ title: "Fermée", questions: [textQuestion()] }).session;
+		store.decline(closed.id, "non");
+		const res = await app.inject({ method: "GET", url: "/api/sessions/history", headers });
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.nextBefore).toBeNull();
+		expect(body.items).toEqual([expect.objectContaining({ id: closed.id, title: "Fermée", status: "declined" })]);
+		expect(body.items.map((s: { id: string }) => s.id)).not.toContain(open.id);
+	});
+
+	it("refuse un curseur d'historique invalide (400)", async () => {
+		const res = await app.inject({ method: "GET", url: "/api/sessions/history?before=abc", headers });
+		expect(res.statusCode).toBe(400);
 	});
 
 	it("renvoie la vue d'une session, avec sa révision, et la marque comme vue", async () => {

@@ -65,13 +65,34 @@ describe("SessionComponent", () => {
 		expect(el.querySelector("a")?.getAttribute("href")).toBe("/");
 	});
 
-	it.each([
-		["answered", "Réponses envoyées"],
-		["declined", "Refus transmis"],
-	] as const)("affiche la confirmation d'une session déjà %s", async (status, title) => {
-		api.get.mockResolvedValue(sessionView({ status }));
+	it("affiche en lecture seule les questions et les réponses d'une session répondue", async () => {
+		api.get.mockResolvedValue(
+			sessionView({
+				status: "answered",
+				answers: { choix: { selected: ["b"], text: "" }, libre: { selected: [], text: "parce que" } },
+			}),
+		);
 		const { el } = await render();
-		expect(el.querySelector("h1")?.textContent).toBe(title);
+		expect(el.querySelector("h1")?.textContent).toBe("Ma session");
+		expect(el.querySelectorAll(".past")).toHaveLength(2);
+		const answers = Array.from(el.querySelectorAll(".past-answer")).map((a) => a.textContent?.trim());
+		expect(answers).toEqual(["Option B", "parce que"]);
+		expect(el.querySelector("textarea, input, button")).toBeNull();
+		expect(el.querySelector("a")?.getAttribute("href")).toBe("/");
+	});
+
+	it("signale les questions sans réponse", async () => {
+		api.get.mockResolvedValue(sessionView({ status: "answered", answers: {} }));
+		const { el } = await render();
+		expect(el.querySelectorAll(".past-answer")[0]?.textContent).toContain("Sans réponse.");
+	});
+
+	it("affiche le motif du refus d'une session refusée, sans réponses", async () => {
+		api.get.mockResolvedValue(sessionView({ status: "declined", declineReason: "hors sujet" }));
+		const { el } = await render();
+		expect(el.querySelector(".notice")?.textContent).toContain("hors sujet");
+		expect(el.querySelector(".past-answer")).toBeNull();
+		expect(el.querySelectorAll(".past")).toHaveLength(2);
 	});
 
 	it("garde le bouton d'envoi désactivé tant que les réponses obligatoires manquent", async () => {

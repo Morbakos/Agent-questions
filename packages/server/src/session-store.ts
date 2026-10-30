@@ -69,7 +69,7 @@ export class SessionStore {
 		return this.db.prepare(sql).get(...params) as T | undefined;
 	}
 
-	private all<T>(sql: string, ...params: string[]): T[] {
+	private all<T>(sql: string, ...params: (string | number)[]): T[] {
 		return this.db.prepare(sql).all(...params) as T[];
 	}
 
@@ -101,7 +101,9 @@ export class SessionStore {
 
 	private mustGet(id: string): Session {
 		const s = this.get(id);
-		if (!s) throw new HttpError(404, "Session introuvable");
+		if (!s) {
+			throw new HttpError(404, "Session introuvable");
+		}
 		return s;
 	}
 
@@ -115,7 +117,9 @@ export class SessionStore {
 	} {
 		if (input.sessionId) {
 			const r = this.row(input.sessionId);
-			if (!r) throw new Error(`session_id inconnu : ${input.sessionId}`);
+			if (!r) {
+				throw new Error(`session_id inconnu : ${input.sessionId}`);
+			}
 			return { session: this.toSession(r), created: false };
 		}
 		const hash = hashQuestions(input.title, input.questions);
@@ -125,7 +129,9 @@ export class SessionStore {
        ORDER BY created_at DESC LIMIT 1`,
 			hash,
 		);
-		if (existing) return { session: this.toSession(existing), created: false };
+		if (existing) {
+			return { session: this.toSession(existing), created: false };
+		}
 
 		const id = randomUUID();
 		this.db
@@ -143,12 +149,16 @@ export class SessionStore {
 	 */
 	updateQuestions(id: string, title: string | undefined, questions: Question[]): Session {
 		const s = this.mustGet(id);
-		if (s.status !== "pending") throw new HttpError(409, "Cette session est déjà clôturée.");
+		if (s.status !== "pending") {
+			throw new HttpError(409, "Cette session est déjà clôturée.");
+		}
 		const newTitle = title ?? s.title;
 		const draft: Answers = {};
 		for (const q of questions) {
 			const d = s.draft[q.id];
-			if (!d) continue;
+			if (!d) {
+				continue;
+			}
 			const known = new Set((q.options ?? []).map((o) => o.id));
 			draft[q.id] = { ...d, selected: d.selected.filter((x) => known.has(x)) };
 		}
@@ -165,21 +175,41 @@ export class SessionStore {
 		return rows.map((r) => this.toSession(r));
 	}
 
+	/**
+	 * Sessions clôturées (répondues ou refusées), plus récentes d'abord. `before` est un curseur : la date de clôture
+	 * de la dernière entrée de la page précédente. `nextBefore` vaut `null` à la dernière page.
+	 */
+	listClosed(limit: number, before?: number): { items: Session[]; nextBefore: number | null } {
+		const rows = this.all<Row>(
+			`SELECT * FROM sessions WHERE status != 'pending' AND answered_at < ? ORDER BY answered_at DESC LIMIT ?`,
+			before ?? Number.MAX_SAFE_INTEGER,
+			limit + 1,
+		);
+		const items = rows.slice(0, limit).map((r) => this.toSession(r));
+		return { items, nextBefore: rows.length > limit ? (items.at(-1)?.answeredAt ?? null) : null };
+	}
+
 	touch(id: string): void {
 		this.db.prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ?").run(Date.now(), id);
 	}
 
 	saveDraft(id: string, draft: Answers): void {
 		const s = this.mustGet(id);
-		if (s.status !== "pending") throw new HttpError(409, "Cette session est déjà clôturée.");
+		if (s.status !== "pending") {
+			throw new HttpError(409, "Cette session est déjà clôturée.");
+		}
 		this.db.prepare("UPDATE sessions SET draft = ? WHERE id = ?").run(JSON.stringify(draft), id);
 	}
 
 	submit(id: string, answers: Answers): Session {
 		const s = this.mustGet(id);
-		if (s.status !== "pending") throw new HttpError(409, "Cette session est déjà clôturée.");
+		if (s.status !== "pending") {
+			throw new HttpError(409, "Cette session est déjà clôturée.");
+		}
 		const errors = validateAnswers(s.questions, answers);
-		if (errors.length) throw new HttpError(422, "Réponses invalides", errors);
+		if (errors.length) {
+			throw new HttpError(422, "Réponses invalides", errors);
+		}
 		this.db
 			.prepare("UPDATE sessions SET status = 'answered', answers = ?, answered_at = ? WHERE id = ?")
 			.run(JSON.stringify(answers), Date.now(), id);
@@ -189,7 +219,9 @@ export class SessionStore {
 
 	decline(id: string, reason: string): Session {
 		const s = this.mustGet(id);
-		if (s.status !== "pending") throw new HttpError(409, "Cette session est déjà clôturée.");
+		if (s.status !== "pending") {
+			throw new HttpError(409, "Cette session est déjà clôturée.");
+		}
 		this.db
 			.prepare("UPDATE sessions SET status = 'declined', decline_reason = ?, answered_at = ? WHERE id = ?")
 			.run(reason, Date.now(), id);
@@ -211,7 +243,9 @@ export class SessionStore {
 	/** Attend la clôture de la session (réponse, refus), le délai, ou l'abandon de l'appelant. */
 	wait(id: string, ms: number, signal?: AbortSignal): Promise<Session> {
 		const current = this.mustGet(id);
-		if (current.status !== "pending" || ms <= 0) return Promise.resolve(current);
+		if (current.status !== "pending" || ms <= 0) {
+			return Promise.resolve(current);
+		}
 		return new Promise((resolve) => {
 			const finish = () => {
 				clearTimeout(timer);

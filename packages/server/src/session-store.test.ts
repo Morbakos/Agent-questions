@@ -2,8 +2,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { HttpError, SessionStore } from "./sessions.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { HttpError, SessionStore } from "./session-store.js";
 import { singleQuestion, textQuestion } from "./test-helpers.js";
 
 let store: SessionStore;
@@ -177,6 +177,45 @@ describe("listOpen et touch", () => {
 		expect(s.lastSeenAt).toBeNull();
 		store.touch(s.id);
 		expect(store.get(s.id)?.lastSeenAt).not.toBeNull();
+	});
+});
+
+describe("listClosed", () => {
+	afterEach(() => vi.restoreAllMocks());
+
+	/** Clôture une session à une date donnée (les dates sont à la milliseconde : on les fixe pour l'ordre). */
+	const closeAt = (title: string, at: number) => {
+		const s = create(title);
+		vi.spyOn(Date, "now").mockReturnValue(at);
+		store.decline(s.id, "");
+		return s;
+	};
+
+	it("ne renvoie que les sessions clôturées, plus récentes d'abord", () => {
+		const old = closeAt("ancienne", 1000);
+		const recent = closeAt("récente", 2000);
+		create("en attente");
+		const page = store.listClosed(10);
+		expect(page.items.map((s) => s.id)).toEqual([recent.id, old.id]);
+		expect(page.nextBefore).toBeNull();
+	});
+
+	it("pagine avec un curseur", () => {
+		const ids = [1, 2, 3, 4, 5].map((at) => closeAt(`S${at}`, at * 1000).id);
+		const first = store.listClosed(2);
+		expect(first.items.map((s) => s.id)).toEqual([ids[4], ids[3]]);
+		expect(first.nextBefore).toBe(4000);
+		const second = store.listClosed(2, first.nextBefore!);
+		expect(second.items.map((s) => s.id)).toEqual([ids[2], ids[1]]);
+		const last = store.listClosed(2, second.nextBefore!);
+		expect(last.items.map((s) => s.id)).toEqual([ids[0]]);
+		expect(last.nextBefore).toBeNull();
+	});
+
+	it("n'a pas de page suivante quand la dernière page est pleine", () => {
+		closeAt("A", 1000);
+		closeAt("B", 2000);
+		expect(store.listClosed(2).nextBefore).toBeNull();
 	});
 });
 

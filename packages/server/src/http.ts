@@ -4,7 +4,7 @@ import { registerGuard } from "./routes/guard.js";
 import { registerMcpRoutes } from "./routes/mcp.js";
 import { registerSessionRoutes } from "./routes/sessions.js";
 import { registerStaticUi } from "./routes/static.js";
-import { HttpError, type SessionStore } from "./sessions.js";
+import { HttpError, type SessionStore } from "./session-store.js";
 
 /** Assemble l'application Fastify : garde Host/Origin, API de l'UI, endpoint MCP, UI statique, `/health`. */
 export async function buildApp(store: SessionStore, cfg: AppConfig): Promise<FastifyInstance> {

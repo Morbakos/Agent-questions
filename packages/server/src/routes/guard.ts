@@ -14,7 +14,9 @@ export function registerGuard(app: FastifyInstance, cfg: AppConfig): void {
 	// Origines supplémentaires autorisées (ex. l'UI de llama-server), séparées par des virgules.
 	// Toujours des origines précises : jamais "*", ce serveur n'a pas d'authentification.
 	for (const o of (process.env.AQ_ALLOWED_ORIGINS ?? "").split(",")) {
-		if (o.trim()) origins.add(o.trim());
+		if (o.trim()) {
+			origins.add(o.trim());
+		}
 	}
 
 	app.addHook("onRequest", async (req, reply) => {

@@ -24,9 +24,13 @@ export function registerUpdateQuestions(server: McpServer, ctx: ToolContext): vo
 		},
 		async ({ session_id, questions, title, wait_seconds }, extra) => {
 			const ids = questions.map((q) => q.id);
-			if (new Set(ids).size !== ids.length) throw new Error("Duplicate question ids");
+			if (new Set(ids).size !== ids.length) {
+				throw new Error("Duplicate question ids");
+			}
 			const current = ctx.store.get(session_id);
-			if (!current) throw new Error(`session_id inconnu : ${session_id}`);
+			if (!current) {
+				throw new Error(`session_id inconnu : ${session_id}`);
+			}
 			if (current.status !== "pending") {
 				throw new Error(
 					`Session already ${current.status}: it cannot be edited. Call get_answers with this session_id.`,
