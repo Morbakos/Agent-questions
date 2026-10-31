@@ -88,6 +88,22 @@
 
 				<main class="questions">
 					<h1>{{ session.title }}</h1>
+					@if (s.pendingUpdate()) {
+						<div
+							class="notice update"
+							role="status">
+							<span
+								>L'agent a modifié les questions. L'envoi est suspendu tant que vous n'avez pas affiché
+								la nouvelle version.</span
+							>
+							<button
+								type="button"
+								class="btn primary"
+								(click)="s.applyUpdate()">
+								Afficher les nouvelles questions
+							</button>
+						</div>
+					}
 					@if (s.updated()) {
 						<p
 							class="notice"
@@ -111,6 +127,9 @@
 								(click)="s.submit()">
 								{{ s.sending() ? "Envoi…" : "Envoyer à l'agent" }}
 							</button>
+							@if (s.pendingUpdate()) {
+								<span class="muted small">Envoi suspendu : l'agent a modifié les questions</span>
+							}
 							@if (s.missing() > 0) {
 								<span class="muted small"
 									>{{ s.missing() }} réponse(s) obligatoire(s) manquante(s)</span

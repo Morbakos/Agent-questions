@@ -8,8 +8,6 @@ import type { ToolContext } from "./context.js";
 /** Objet `extra` fourni par le SDK à chaque appel d'outil. */
 export type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 
-const lastOpened = new Map<string, number>();
-
 const json = (value: unknown) => ({
 	content: [{ type: "text" as const, text: JSON.stringify(value) }],
 });
@@ -29,18 +27,15 @@ export function waitSecondsField({ cfg }: ToolContext, extraAdvice: string) {
 		);
 }
 
-/** Ouvre le navigateur sauf si la page est déjà ouverte (vue récemment) ou vient d'être ouverte. */
+/**
+ * Ouvre le navigateur, mais jamais un second onglet : si une UI est déjà connectée (ou vient d'être ouverte), c'est
+ * elle qui est envoyée sur la session par `hub.focus`, appelé par les outils quand les questions sont nouvelles.
+ */
 function maybeOpen(ctx: ToolContext, s: Session): void {
-	if (ctx.cfg.noOpen || s.status !== "pending") {
+	if (ctx.cfg.noOpen || s.status !== "pending" || ctx.hub.hasUi) {
 		return;
 	}
-	const now = Date.now();
-	const seenRecently = s.lastSeenAt !== null && now - s.lastSeenAt < 60_000;
-	const openedRecently = now - (lastOpened.get(s.id) ?? 0) < 120_000;
-	if (seenRecently || openedRecently) {
-		return;
-	}
-	lastOpened.set(s.id, now);
+	ctx.hub.markOpened();
 	openInBrowser(urlOf(ctx, s));
 }
 

@@ -14,12 +14,15 @@ Monorepo npm (workspaces `packages/shared`, `packages/server` et `packages/ui`),
   (contrat de l'API de l'UI : `SessionView`, `SessionSummary`, `ApiError`). Compilé par `tsc` vers `dist`. L'UI
   l'importe en `import type` et n'utilise à l'exécution que `answers.ts` (`sideEffects: false` : zod n'entre pas dans
   le bundle).
-- `packages/server/` (`@morbakos/agent-questions`, **seul paquet publiable**, sur GitHub Packages) : le build
-  (`scripts/build-server.mjs` à la racine) bundle `src/index.ts` avec esbuild en un seul `dist/index.js` (avec shebang, champ `bin`) :
-  `shared` y est inliné (donc devDependency), les `dependencies` restent externes ; l'UI est copiée dans `dist/ui`
+- `packages/server/` (`@agent-questions/server`, **privé**) : le build (`scripts/build-server.mjs` à la racine)
+  bundle `src/index.ts` avec esbuild en un seul `packages/server/dist/index.js` (avec shebang) : `shared` y est inliné
+  (donc devDependency), les `dependencies` restent externes ; l'UI est copiée dans `packages/server/dist/ui`
   (`uiDir` par défaut, avec repli sur le build de `@agent-questions/ui`, déclaré en devDependency et exposé par son
-  `exports`). Le build échoue si l'UI n'est pas construite ; `npm run typecheck -w @morbakos/agent-questions` vérifie
-  seulement les types. `shared` et `ui` restent privés.
+  `exports`). Le build échoue si l'UI n'est pas construite ; `npm run typecheck -w @agent-questions/server` vérifie
+  seulement les types.
+  **Le paquet publié est le paquet racine** `@morbakos/agent-questions` (GitHub Packages, champs `bin` et `files` de
+  `package.json`) : `scripts/build-root.mjs` copie ce bundle et l'UI dans `dist/` à la racine. Ses `dependencies`
+  doivent être **identiques** à celles de `packages/server` (le script refuse sinon) : ajoutez toute dépendance aux deux.
   Publier : voir « Publication » du README. Fastify 5, SDK MCP (`@modelcontextprotocol/sdk`), zod 3, SQLite via `node:sqlite` (intégré, pas de
   dépendance native). ESM `NodeNext` : les imports relatifs portent l'extension `.js`.
   - `src/index.ts` : point d'entrée. Sans option, démarre le serveur HTTP. Avec `--stdio`, lance le relais.
@@ -59,10 +62,10 @@ Créer `packages/ui/src/app/features/<nom>/`, puis une entrée `loadComponent` d
 
 ```bash
 npm install --legacy-peer-deps   # sans le flag, npm 10.9 plante (« edgesOut ») sur les peers d'Angular 21
-npm run build              # shared, UI puis serveur (l'UI est lente à compiler)
-npm run build -w @morbakos/agent-questions  # serveur seul : types puis bundle esbuild dans dist/, UI copiée dans dist/ui (shared et UI doivent être construits)
-npm run typecheck -w @morbakos/agent-questions  # vérification de types seule (shared doit être construit)
-npm start                  # serveur sur http://127.0.0.1:4317 (UI incluse si construite)
+npm run build              # shared, UI, serveur puis assemblage de dist/ à la racine (l'UI est lente à compiler)
+npm run build -w @agent-questions/server  # serveur seul : types puis bundle esbuild dans packages/server/dist/, UI copiée dans dist/ui (shared et UI doivent être construits)
+npm run typecheck -w @agent-questions/server  # vérification de types seule (shared doit être construit)
+npm start                  # bundle racine (dist/index.js) sur http://127.0.0.1:4317, UI incluse
 npm run dev:ui             # construit shared puis ng serve sur :4200, proxy /api vers :4317
 npm run dev:shared         # tsc --watch sur shared (si vous le modifiez pendant un dev:ui / dev:server)
 npm test                   # tests du serveur et de shared (Vitest), puis de l'UI (ng test)
@@ -72,7 +75,7 @@ npm run format             # Prettier (format:check pour vérifier sans écrire)
 ```
 
 `npm run dev:server` utilise la syntaxe `AQ_DEV=1 …` de bash : sous PowerShell, faire
-`npm run build -w @agent-questions/shared; $env:AQ_DEV="1"; npm run dev -w @morbakos/agent-questions`.
+`npm run build -w @agent-questions/shared; $env:AQ_DEV="1"; npm run dev -w @agent-questions/server`.
 
 ## Tests
 
@@ -110,13 +113,35 @@ réveillée. Ne séparez pas ces deux parties sans remplacer l'émetteur (pollin
 - **Attente** : `ask_user` et `get_answers` attendent jusqu'à `wait_seconds` (défaut `AQ_WAIT_SECONDS`, 480 s), puis
   répondent `pending` avec le `session_id`. L'agent n'est pas prévenu d'une réponse tardive : c'est à l'utilisateur de
   lui dire de rappeler `get_answers` (documenté dans le README).
-- **Le SDK envoie déjà un `: keepalive` SSE** toutes les 15 s sur les connexions `/mcp` : inutile d'en ajouter.
+- **Taille de la base** : les données pèsent ~3 Ko par session ; le reste est le journal WAL, que `SessionStore` borne
+  (`wal_autocheckpoint = 100`, `journal_size_limit`, repli au démarrage) : sans cela il monte à ~4 Mo et y reste. **Ne
+  jamais écrire en base dans une route lue en boucle** (l'UI sonde toutes les 5 s) : chaque écriture ajoute une page de
+  4 Ko au WAL. C'est pourquoi `GET /api/sessions/:id` ne note plus la dernière vue (`last_seen_at` n'est plus écrit).
+- **Un seul onglet, et il suit l'agent sans forcer la main** : l'UI ouverte garde un flux SSE `GET /api/events`
+  (`routes/events.ts`) ; `UiHub` (`ui-hub.ts`, instance unique créée dans `buildApp`, partagée avec les outils par
+  `ToolContext.hub`) en tient la liste. `maybeOpen` (`respond.ts`) n'ouvre le navigateur que si `hub.hasUi` est faux
+  (aucun onglet connecté, ni ouvert depuis moins de 15 s). `ask_user` (session créée) appelle `hub.announce(session)` :
+  événement SSE `new-session` (`UiNewSessionEvent`), rejoué à l'onglet qui se connecte dans les 10 s. C'est l'UI qui
+  décide (`core/live.ts`) : navigation directe si aucun formulaire n'est en cours de saisie (`LiveService.editing`,
+  renseigné par `SessionState`), sinon notification « Y aller / Ignorer » (`offer`) ; titre de l'onglet préfixé de
+  « (1) » s'il est en arrière-plan. Aucun événement sur `update_questions` : seule la page de la session concernée le
+  voit, en sondant (`SessionState.pendingUpdate`) ; elle **propose** la nouvelle version (`applyUpdate()`) et suspend
+  l'envoi (`canSubmit`), car le serveur valide contre la version à jour. `ParamsReuseStrategy` recrée la page de
+  session quand seul l'identifiant change. Marche aussi avec `AQ_NO_OPEN=1` : pas d'ouverture du navigateur, mais un
+  onglet déjà connecté est prévenu.
+- **Le SDK envoie déjà un `: keepalive` SSE** toutes les 15 s sur les connexions `/mcp` : inutile d'en ajouter (le flux
+  `/api/events` envoie le sien, ce n'est pas le SDK).
 
 ## Les descriptions d'outils sont des prompts
 
 Les descriptions de `ask_user` / `get_answers`, celle du paramètre `wait_seconds` et le message `pending` sont lus par
-les modèles : les modifier change le comportement des agents. Deux leçons déjà apprises :
+les modèles : les modifier change le comportement des agents. Trois points à connaître :
 
+- La description d'`ask_user` exclut explicitement la validation d'un plan (« NOT for asking the user to approve… ») :
+  les agents s'en servaient comme d'un bouton « OK ». Ce n'est pas son but ; un test en garde la formulation.
+- La description d'`ask_user` suggère de l'exécuter en tâche de fond (l'utilisateur peut mettre longtemps à répondre) :
+  l'agent continue ce qui ne dépend pas des réponses. Elle reste conditionnelle (« if your client can ») : tous les
+  clients n'ont pas de tâches de fond.
 - Un modèle qui passe `wait_seconds: 0` reçoit `pending` aussitôt et rend la main : la description du paramètre dit
   de ne pas le renseigner. Si le problème revient, envisager un plancher côté serveur (`AQ_MIN_WAIT_SECONDS`).
 - Quand `AQ_NO_OPEN=1` (Docker), `relayHint` dans `mcp.ts` demande à l'agent de donner l'adresse de l'UI **avant** un
@@ -167,14 +192,14 @@ curl -s -X POST http://127.0.0.1:4317/mcp -H 'Content-Type: application/json' \
 Pour répondre sans navigateur : `POST /api/sessions/<id>/answers` avec `{"<question_id>":{"selected":["<option_id>"],"text":""}}`.
 Un appel `ask_user` avec `wait_seconds` positif doit se terminer dès que cette requête est envoyée.
 
-Le mode stdio se teste en lançant `node packages/server/dist/index.js --stdio` avec un client qui envoie du JSON-RPC ligne par
+Le mode stdio se teste en lançant `node dist/index.js --stdio` avec un client qui envoie du JSON-RPC ligne par
 ligne : vérifier le démarrage automatique du serveur, le réveil de l'attente par l'API de l'UI, l'annulation, et que
 stdout ne contient que du JSON-RPC. Jusqu'ici ce mode n'a été validé que sous Linux, avec un client simulé.
 
 ## Docker
 
-`Dockerfile` : build de l'UI et du serveur, image d'exécution avec `AQ_BIND_HOST=0.0.0.0`, `AQ_NO_OPEN=1`,
-`AQ_DATA_DIR=/data`. `docker-compose.yml` contient `agent-questions` et un service `llama` (llama.cpp, essai avec un
+`Dockerfile` : build de l'UI et du serveur, image d'exécution (bundle racine `dist/` et dépendances de production,
+utilisateur `node`, `HEALTHCHECK` sur `/health`) avec `AQ_BIND_HOST=0.0.0.0`, `AQ_NO_OPEN=1`, `AQ_DATA_DIR=/data`. `docker-compose.yml` contient `agent-questions` et un service `llama` (llama.cpp, essai avec un
 modèle local) qui n'est **pas nécessaire** pour Claude Code. Pour le serveur seul :
 `docker compose up -d --build agent-questions`.
 

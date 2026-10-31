@@ -1,16 +1,22 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppConfig } from "./config.js";
 import { createMcpServer } from "./mcp.js";
+import { openInBrowser } from "./open.js";
 import { SessionStore } from "./session-store.js";
 import { singleQuestion, testConfig, textQuestion } from "./test-helpers.js";
+import { UiHub } from "./ui-hub.js";
+
+// Aucun test n'ouvre de vrai navigateur (cf. `noOpen` de `testConfig`) ; ici on observe aussi les ouvertures voulues.
+vi.mock("./open.js", () => ({ openInBrowser: vi.fn() }));
 
 let store: SessionStore;
+let hub: UiHub;
 let client: Client;
 
 async function connect(cfg: AppConfig = testConfig()): Promise<void> {
-	const server = createMcpServer(store, cfg);
+	const server = createMcpServer(store, cfg, hub);
 	const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 	client = new Client({ name: "test", version: "0.0.0" });
 	await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
@@ -25,6 +31,8 @@ async function call(name: string, args: Record<string, unknown>) {
 
 beforeEach(async () => {
 	store = new SessionStore(":memory:");
+	hub = new UiHub();
+	vi.mocked(openInBrowser).mockClear();
 	await connect();
 });
 
@@ -47,6 +55,39 @@ describe("tools/list", () => {
 	});
 });
 
+describe("ouverture du navigateur", () => {
+	const other = [textQuestion({ id: "autre" })];
+
+	beforeEach(async () => {
+		await client.close();
+		await connect(testConfig({ noOpen: false }));
+	});
+
+	it("ouvre un onglet sur la session quand aucune UI n'est ouverte", async () => {
+		const { json } = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		expect(openInBrowser).toHaveBeenCalledExactlyOnceWith(`http://127.0.0.1:4317/s/${json.session_id}`);
+	});
+
+	it("n'ouvre jamais un second onglet : la session suivante arrive dans l'onglet déjà ouvert", async () => {
+		await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		await call("ask_user", { title: "T2", questions: other, wait_seconds: 0 });
+		expect(openInBrowser).toHaveBeenCalledTimes(1);
+	});
+
+	it("n'ouvre rien quand une UI est déjà connectée", async () => {
+		vi.spyOn(hub, "hasUi", "get").mockReturnValue(true);
+		await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		expect(openInBrowser).not.toHaveBeenCalled();
+	});
+
+	it("n'ouvre rien avec noOpen", async () => {
+		await client.close();
+		await connect(testConfig({ noOpen: true }));
+		await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		expect(openInBrowser).not.toHaveBeenCalled();
+	});
+});
+
 describe("ask_user", () => {
 	it("renvoie pending avec l'adresse de la session quand personne ne répond", async () => {
 		const { json } = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
@@ -58,6 +99,27 @@ describe("ask_user", () => {
 		const a = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
 		const b = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
 		expect(b.json.session_id).toBe(a.json.session_id);
+	});
+
+	it("annonce la nouvelle session aux onglets ouverts, une seule fois", async () => {
+		const announce = vi.spyOn(hub, "announce");
+		const a = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		expect(announce).toHaveBeenCalledExactlyOnceWith(
+			expect.objectContaining({ id: a.json.session_id, title: "T" }),
+		);
+		await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		await call("get_answers", { session_id: a.json.session_id, wait_seconds: 0 });
+		expect(announce).toHaveBeenCalledTimes(1);
+	});
+
+	it("décrit l'exécution en tâche de fond dans la description de l'outil", async () => {
+		const { tools } = await client.listTools();
+		expect(tools.find((t) => t.name === "ask_user")?.description).toContain("background task");
+	});
+
+	it("dit à l'agent de ne pas s'en servir pour faire valider un plan", async () => {
+		const { tools } = await client.listTools();
+		expect(tools.find((t) => t.name === "ask_user")?.description).toContain("NOT for asking the user to approve");
 	});
 
 	it("se termine dès que l'utilisateur répond et livre les libellés", async () => {
@@ -109,6 +171,17 @@ describe("update_questions", () => {
 		expect(edited.json).toMatchObject({ status: "pending", session_id: id });
 		expect(store.get(id)).toMatchObject({ title: "T2", revision: 1 });
 		expect(store.get(id)?.questions[0]?.prompt).toBe("Reformulée");
+	});
+
+	it("n'annonce rien aux onglets : seule la page de la session concernée se met à jour", async () => {
+		const first = await call("ask_user", { title: "T", questions, wait_seconds: 0 });
+		const announce = vi.spyOn(hub, "announce");
+		await call("update_questions", {
+			session_id: first.json.session_id,
+			questions: [textQuestion()],
+			wait_seconds: 0,
+		});
+		expect(announce).not.toHaveBeenCalled();
 	});
 
 	it("réveille l'attente avec les réponses données après l'édition", async () => {

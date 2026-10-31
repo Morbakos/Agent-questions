@@ -5,6 +5,8 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY packages/server/package.json packages/server/
 COPY packages/ui/package.json packages/ui/
+# --legacy-peer-deps : sans lui, npm 10.9 plante sur les peer dependencies d'Angular 21
+# npm ci : versions du lockfile (sans lui, les dépendances plus récentes font échouer le typecheck)
 RUN npm ci --legacy-peer-deps
 COPY . .
 RUN npm run build
@@ -27,5 +29,5 @@ VOLUME /data
 EXPOSE 4317
 USER node
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=5 \
-  CMD node -e "fetch('http://127.0.0.1:4317/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.AQ_PORT||4317)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 CMD ["node", "dist/index.js"]

@@ -168,7 +168,7 @@ describe("SessionComponent", () => {
 		});
 	});
 
-	it("affiche un bandeau quand l'agent modifie les questions", async () => {
+	it("propose d'afficher les questions modifiées par l'agent, sans les imposer", async () => {
 		api.get.mockResolvedValue(sessionView());
 		const { el, settle } = await render();
 		expect(el.querySelector(".notice")).toBeNull();
@@ -176,7 +176,33 @@ describe("SessionComponent", () => {
 		api.get.mockResolvedValue(sessionView({ revision: 1, title: "Titre modifié" }));
 		await settle(POLL_MS);
 		expect(el.querySelector(".notice")?.textContent).toContain("L'agent a modifié les questions");
+		expect(el.querySelector("h1")?.textContent).toBe("Ma session");
+		expect(button(el, "Envoyer")?.disabled).toBe(true);
+		expect(el.textContent).toContain("Envoi suspendu");
+	});
+
+	it("affiche les questions modifiées quand l'utilisateur le demande, puis rétablit l'envoi", async () => {
+		api.get.mockResolvedValue(sessionView({ questions: [sessionView().questions[1]!] }));
+		const { el, settle } = await render();
+		const area = el.querySelector<HTMLTextAreaElement>("textarea")!;
+		area.value = "ok";
+		area.dispatchEvent(new Event("input"));
+		await settle();
+		expect(button(el, "Envoyer")?.disabled).toBe(false);
+
+		api.get.mockResolvedValue(
+			sessionView({ revision: 1, title: "Titre modifié", questions: [sessionView().questions[1]!] }),
+		);
+		await settle(POLL_MS);
+		expect(button(el, "Envoyer")?.disabled).toBe(true);
+
+		button(el, "Afficher les nouvelles questions")!.click();
+		await settle();
 		expect(el.querySelector("h1")?.textContent).toBe("Titre modifié");
+		expect(el.querySelector<HTMLTextAreaElement>("textarea")?.value).toBe("ok");
+		expect(el.querySelector(".notice")?.textContent).toContain("conservées");
+		expect(button(el, "Envoyer")?.disabled).toBe(false);
+		expect(button(el, "Afficher les nouvelles questions")).toBeUndefined();
 	});
 
 	it("fait défiler vers la question depuis le plan", async () => {

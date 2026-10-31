@@ -90,6 +90,14 @@
 	white-space: pre-wrap;
 }
 
+.notice.update {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.9rem;
+	flex-wrap: wrap;
+}
+
 .actions {
 	position: sticky;
 	bottom: 0;

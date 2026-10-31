@@ -3,11 +3,12 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import type { AppConfig } from "../config.js";
 import { createMcpServer } from "../mcp.js";
 import type { SessionStore } from "../session-store.js";
+import type { UiHub } from "../ui-hub.js";
 
 /** Endpoint MCP (Streamable HTTP, sans état : un serveur et un transport par requête). */
-export function registerMcpRoutes(app: FastifyInstance, store: SessionStore, cfg: AppConfig): void {
+export function registerMcpRoutes(app: FastifyInstance, store: SessionStore, cfg: AppConfig, hub: UiHub): void {
 	app.post("/mcp", async (req, reply) => {
-		const server = createMcpServer(store, cfg);
+		const server = createMcpServer(store, cfg, hub);
 		const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
 		reply.hijack();
 		reply.raw.on("close", () => {

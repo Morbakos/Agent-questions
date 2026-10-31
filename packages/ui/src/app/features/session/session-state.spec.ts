@@ -9,6 +9,7 @@ import {
 	textQuestion,
 } from "../../../testing/fixtures";
 import { ApiService } from "../../core/api";
+import { LiveService } from "../../core/live";
 import { DRAFT_DELAY_MS, POLL_MS, SessionState } from "./session-state";
 
 describe("SessionState", () => {
@@ -60,6 +61,25 @@ describe("SessionState", () => {
 			},
 		);
 
+		it("signale qu'un formulaire est affiché tant que la session est modifiable, et plus ensuite", async () => {
+			const live = TestBed.inject(LiveService);
+			await ready();
+			TestBed.tick();
+			expect(live.editing()).toBe(true);
+
+			await state.decline("");
+			TestBed.tick();
+			expect(live.editing()).toBe(false);
+		});
+
+		it("ne signale plus de formulaire quand la page est quittée", async () => {
+			const live = TestBed.inject(LiveService);
+			await ready();
+			TestBed.tick();
+			TestBed.resetTestingModule();
+			expect(live.editing()).toBe(false);
+		});
+
 		it("passe à « missing » quand la session est introuvable", async () => {
 			api.get.mockRejectedValue(new HttpErrorResponse({ status: 404 }));
 			await state.init("inconnue");
@@ -105,6 +125,25 @@ describe("SessionState", () => {
 				expect.objectContaining({ libre: { selected: [], text: "ab" } }),
 			);
 			expect(state.savedAt()).toBeInstanceOf(Date);
+		});
+
+		it("enregistre la saisie en attente quand la page est quittée", async () => {
+			await ready();
+			state.onAnswer("libre", { selected: [], text: "a" });
+			TestBed.resetTestingModule();
+			expect(api.saveDraft).toHaveBeenCalledExactlyOnceWith(
+				"s1",
+				expect.objectContaining({ libre: { selected: [], text: "a" } }),
+			);
+		});
+
+		it("n'enregistre rien en quittant la page quand le brouillon est à jour", async () => {
+			await ready();
+			state.onAnswer("libre", { selected: [], text: "a" });
+			await vi.advanceTimersByTimeAsync(DRAFT_DELAY_MS);
+			api.saveDraft.mockClear();
+			TestBed.resetTestingModule();
+			expect(api.saveDraft).not.toHaveBeenCalled();
 		});
 
 		it("ne bloque pas l'utilisateur quand l'enregistrement échoue", async () => {
@@ -212,16 +251,69 @@ describe("SessionState", () => {
 			await vi.advanceTimersByTimeAsync(POLL_MS);
 			expect(api.get).toHaveBeenCalledTimes(2);
 			expect(state.session()).toBe(before);
+			expect(state.pendingUpdate()).toBeNull();
 			expect(state.updated()).toBe(false);
 		});
 
-		it("met à jour les questions, prévient l'utilisateur et conserve ses réponses", async () => {
+		it("propose la nouvelle version sans l'appliquer, et suspend l'envoi", async () => {
+			await ready();
+			const before = state.session();
+			state.onAnswer("libre", { selected: [], text: "ok" });
+			state.onAnswer("choix", { selected: ["a"], text: "" });
+			expect(state.canSubmit()).toBe(true);
+
+			api.get.mockResolvedValue(edited());
+			await vi.advanceTimersByTimeAsync(POLL_MS);
+
+			expect(state.pendingUpdate()?.revision).toBe(1);
+			expect(state.session()).toBe(before);
+			expect(state.updated()).toBe(false);
+			expect(state.canSubmit()).toBe(false);
+		});
+
+		it("garde la même proposition tant que la révision n'a pas changé, et prend la plus récente", async () => {
+			await ready();
+			api.get.mockResolvedValue(edited());
+			await vi.advanceTimersByTimeAsync(POLL_MS);
+			const first = state.pendingUpdate();
+			await vi.advanceTimersByTimeAsync(POLL_MS);
+			expect(state.pendingUpdate()).toBe(first);
+
+			api.get.mockResolvedValue(edited({ revision: 2 }));
+			await vi.advanceTimersByTimeAsync(POLL_MS);
+			expect(state.pendingUpdate()?.revision).toBe(2);
+		});
+
+		it("applique la nouvelle version à la demande : questions à jour, envoi rétabli", async () => {
+			await ready();
+			state.onAnswer("libre", { selected: [], text: "ok" });
+			state.onAnswer("choix", { selected: ["b"], text: "" });
+			api.get.mockResolvedValue(edited());
+			await vi.advanceTimersByTimeAsync(POLL_MS);
+
+			state.applyUpdate();
+			expect(state.session()?.revision).toBe(1);
+			expect(state.pendingUpdate()).toBeNull();
+			expect(state.updated()).toBe(true);
+			expect(state.canSubmit()).toBe(true);
+		});
+
+		it("ne fait rien quand il n'y a pas de proposition à appliquer", async () => {
+			await ready();
+			const before = state.session();
+			state.applyUpdate();
+			expect(state.session()).toBe(before);
+			expect(state.updated()).toBe(false);
+		});
+
+		it("conserve les réponses saisies quand la nouvelle version est affichée", async () => {
 			await ready();
 			state.onAnswer("libre", { selected: [], text: "en cours de saisie" });
 			state.onAnswer("choix", { selected: ["b"], text: "" });
 
 			api.get.mockResolvedValue(edited());
 			await vi.advanceTimersByTimeAsync(POLL_MS);
+			state.applyUpdate();
 
 			expect(state.session()?.revision).toBe(1);
 			expect(state.session()?.questions[0]?.options?.map((o) => o.id)).toEqual(["b", "c"]);
@@ -235,6 +327,7 @@ describe("SessionState", () => {
 			state.onAnswer("choix", { selected: ["a"], text: "" });
 			api.get.mockResolvedValue(edited());
 			await vi.advanceTimersByTimeAsync(POLL_MS);
+			state.applyUpdate();
 			expect(state.answers()["choix"]?.selected).toEqual([]);
 		});
 
@@ -242,6 +335,7 @@ describe("SessionState", () => {
 			await ready();
 			api.get.mockResolvedValue(edited({ questions: [textQuestion(), multiQuestion()] }));
 			await vi.advanceTimersByTimeAsync(POLL_MS);
+			state.applyUpdate();
 			expect(Object.keys(state.answers()).sort()).toEqual(["libre", "multi"]);
 			expect(state.answers()["multi"]).toEqual({ selected: [], text: "" });
 		});
@@ -255,6 +349,7 @@ describe("SessionState", () => {
 				}),
 			);
 			await vi.advanceTimersByTimeAsync(POLL_MS);
+			state.applyUpdate();
 			expect(state.answers()["multi"]?.selected).toEqual(["x"]);
 		});
 
@@ -269,9 +364,9 @@ describe("SessionState", () => {
 			await ready();
 			api.get.mockRejectedValueOnce(new Error("réseau")).mockResolvedValue(edited());
 			await vi.advanceTimersByTimeAsync(POLL_MS);
-			expect(state.updated()).toBe(false);
+			expect(state.pendingUpdate()).toBeNull();
 			await vi.advanceTimersByTimeAsync(POLL_MS);
-			expect(state.updated()).toBe(true);
+			expect(state.pendingUpdate()?.revision).toBe(1);
 		});
 
 		it("ne sonde pas pendant un envoi", async () => {

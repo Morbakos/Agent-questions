@@ -5,12 +5,13 @@ import { registerAskUser } from "./tools/ask-user.js";
 import type { ToolContext } from "./tools/context.js";
 import { registerGetAnswers } from "./tools/get-answers.js";
 import { registerUpdateQuestions } from "./tools/update-questions.js";
+import type { UiHub } from "./ui-hub.js";
 
 /**
  * Assemble le serveur MCP. Pour ajouter un outil : créer `tools/<nom>.ts` qui exporte `registerXxx(server, ctx)`,
  * puis l'appeler ci-dessous.
  */
-export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer {
+export function createMcpServer(store: SessionStore, cfg: AppConfig, hub: UiHub): McpServer {
 	// Sans ouverture automatique du navigateur (Docker, serveur distant), c'est à l'agent de transmettre l'adresse.
 	// La page d'accueil liste les questions en attente et se rafraîchit seule : l'adresse de base suffit, l'agent peut
 	// la donner AVANT l'appel, qui reste unique (ask_user attend la réponse). get_answers ne sert qu'après un timeout.
@@ -25,7 +26,7 @@ export function createMcpServer(store: SessionStore, cfg: AppConfig): McpServer 
 		relayHint ? { instructions: relayHint } : undefined,
 	);
 
-	const ctx: ToolContext = { store, cfg, relayHint };
+	const ctx: ToolContext = { store, cfg, hub, relayHint };
 	registerAskUser(server, ctx);
 	registerUpdateQuestions(server, ctx);
 	registerGetAnswers(server, ctx);

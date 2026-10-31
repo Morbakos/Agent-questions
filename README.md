@@ -31,10 +31,27 @@ claude mcp add --transport http agent-questions http://127.0.0.1:4317/mcp
 Pour les autres agents (Codex, Cursor, VS Code…), déclarez une URL MCP HTTP `http://127.0.0.1:4317/mcp`
 selon leur configuration (le nom exact du champ varie, à vérifier dans leur doc).
 
+Quand l'agent appelle `ask_user`, l'UI s'ouvre toute seule dans votre navigateur (sauf avec `AQ_NO_OPEN=1`), et **un seul
+onglet** : si une UI est déjà ouverte, le serveur n'en ouvre pas de second.
+
+- **Nouvelles questions** : sur la liste ou sur une page sans rien à perdre (« Réponses envoyées », session fermée),
+  l'onglet ouvert va directement dessus. Sur un formulaire en cours, une notification propose « Y aller » ou
+  « Ignorer », sans vous arracher à votre saisie (qui est de toute façon enregistrée dans le brouillon).
+- **Questions modifiées par l'agent** : seul l'onglet qui affiche cette session le sait. Il propose « Afficher les
+  nouvelles questions » au lieu de remplacer le formulaire sous vos doigts, et l'envoi est suspendu jusque-là (le
+  serveur valide vos réponses contre la nouvelle version). Vos réponses sont conservées quand vous l'affichez.
+- **Onglet en arrière-plan** : un site ne peut pas se mettre au premier plan. Le titre de l'onglet devient
+  « (1) Questions de l'agent » jusqu'à ce que vous y reveniez.
+
+La description d'`ask_user` suggère aussi à l'agent de l'exécuter en tâche de fond, puisque vous pouvez mettre du temps
+à répondre.
+
 Pour inciter l'agent à l'utiliser, ajoutez dans `CLAUDE.md` / `AGENTS.md` :
 
 > Pour toute décision qui demande plusieurs questions ou beaucoup de contexte, utilise l'outil MCP
-> `ask_user` plutôt que de poser les questions dans le terminal. Si le résultat est `pending`,
+> `ask_user` plutôt que de poser les questions dans le terminal, mais seulement pour des questions ouvertes ou des
+> choix que tu ne peux pas trancher seul : jamais pour me faire valider un plan ou une modification (présente-les
+> dans ta réponse). Si le résultat est `pending`,
 > appelle `get_answers` avec le `session_id`, ne repose jamais les mêmes questions. Si l'utilisateur te dit
 > qu'il a répondu, appelle `get_answers` avec le `session_id` de la session concernée.
 
@@ -114,6 +131,13 @@ Ou l'image publiée sur GitHub Container Registry (la base SQLite est dans le vo
 ```bash
 docker run -d --name agent-questions -p 127.0.0.1:4317:4317 -v aq-data:/data ghcr.io/morbakos/agent-questions:latest
 claude mcp add --transport http agent-questions http://127.0.0.1:4317/mcp
+```
+
+L'image s'exécute avec l'utilisateur `node` (uid 1000), pas en root. Un volume `/data` créé par une version
+précédente de l'image appartient à root : rendez-le inscriptible une fois, sinon le serveur ne démarre pas :
+
+```bash
+docker run --rm -v aq-data:/data alpine chown -R 1000:1000 /data
 ```
 
 Pour un autre port côté hôte, passez-le aussi au serveur (`-e AQ_PORT=4318 -p 127.0.0.1:4318:4318`) : le serveur
@@ -198,7 +222,7 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 | `AQ_PORT` | `4317` | Port HTTP |
 | `AQ_DATA_DIR` | `~/.agent-questions` | Dossier de la base SQLite |
 | `AQ_WAIT_SECONDS` | `480` | Attente max avant de répondre `pending` |
-| `AQ_NO_OPEN` | | `1` pour ne pas ouvrir le navigateur |
+| `AQ_NO_OPEN` | | `1` pour ne pas ouvrir le navigateur (un onglet déjà ouvert continue de suivre l'agent) |
 | `AQ_BIND_HOST` | `127.0.0.1` | Adresse d'écoute (`0.0.0.0` dans Docker) |
 | `AQ_ALLOWED_HOSTS` | | Noms d'hôte supplémentaires acceptés (séparés par des virgules) |
 | `AQ_ALLOWED_ORIGINS` | | Origines `http://hôte:port` supplémentaires autorisées à appeler `/mcp` depuis un navigateur (séparées par des virgules), ex. l'interface de llama-server. Jamais `*` : le serveur n'a pas d'authentification |
@@ -216,18 +240,20 @@ est inchangé. Refusé si la session est déjà répondue ou refusée.
 
 ## Publication
 
-Le seul paquet publié est `@morbakos/agent-questions` (`packages/server`) : `dist/index.js` est un bundle esbuild qui
-inline `@agent-questions/shared`, et l'UI construite est copiée dans `dist/ui`. Les autres paquets restent privés.
+Le seul paquet publié est le paquet racine `@morbakos/agent-questions` : `dist/index.js` est un bundle esbuild qui
+inline `@agent-questions/shared`, et l'UI construite est copiée dans `dist/ui`. Les workspaces de `packages/` sont
+privés.
 
 ```bash
-npm run build                                   # shared, UI puis bundle du serveur
-npm pack --dry-run -w @morbakos/agent-questions # vérifier le contenu du tarball
+npm run build                                   # shared, UI, serveur puis assemblage de dist/ à la racine
+npm pack --dry-run                              # vérifier le contenu du tarball
 npm login --registry=https://npm.pkg.github.com # jeton avec le droit write:packages
-npm publish -w @morbakos/agent-questions
+npm publish
 ```
 
-`prepublishOnly` reconstruit le bundle et refuse de publier si l'UI n'est pas construite. Incrémentez `version` dans
-`packages/server/package.json` avant chaque publication.
+`prepublishOnly` relance `npm run build`, dont l'assemblage final refuse de continuer si les `dependencies` de
+`package.json` et de `packages/server/package.json` ne sont pas identiques (ajoutez toute nouvelle dépendance aux
+deux). Incrémentez `version` dans `package.json` (à la racine) avant chaque publication.
 
 ## Licence
 

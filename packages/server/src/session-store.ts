@@ -19,7 +19,6 @@ export interface Session {
 	createdAt: number;
 	answeredAt: number | null;
 	deliveredAt: number | null;
-	lastSeenAt: number | null;
 }
 
 interface Row {
@@ -35,7 +34,6 @@ interface Row {
 	created_at: number;
 	answered_at: number | null;
 	delivered_at: number | null;
-	last_seen_at: number | null;
 }
 
 export class HttpError extends Error {
@@ -61,6 +59,12 @@ export class SessionStore {
 		this.db = new DatabaseSync(file);
 		this.events.setMaxListeners(0);
 		this.db.exec("PRAGMA journal_mode = WAL");
+		// Le WAL ne rétrécit jamais seul : par défaut il atteint ~4 Mo (1000 pages) puis garde cette taille, pour
+		// quelques Ko de données. On le replie tous les ~400 Ko (100 pages), on le tronque après chaque repli, et on
+		// vide celui qu'un arrêt brutal a pu laisser.
+		this.db.exec("PRAGMA wal_autocheckpoint = 100");
+		this.db.exec("PRAGMA journal_size_limit = 262144");
+		this.db.exec("PRAGMA wal_checkpoint(TRUNCATE)");
 		migrate(this.db);
 	}
 
@@ -90,7 +94,6 @@ export class SessionStore {
 			createdAt: r.created_at,
 			answeredAt: r.answered_at,
 			deliveredAt: r.delivered_at,
-			lastSeenAt: r.last_seen_at,
 		};
 	}
 
@@ -187,10 +190,6 @@ export class SessionStore {
 		);
 		const items = rows.slice(0, limit).map((r) => this.toSession(r));
 		return { items, nextBefore: rows.length > limit ? (items.at(-1)?.answeredAt ?? null) : null };
-	}
-
-	touch(id: string): void {
-		this.db.prepare("UPDATE sessions SET last_seen_at = ? WHERE id = ?").run(Date.now(), id);
 	}
 
 	saveDraft(id: string, draft: Answers): void {
