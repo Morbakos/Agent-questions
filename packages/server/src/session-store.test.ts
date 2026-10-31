@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -164,19 +164,54 @@ describe("wait", () => {
 	});
 });
 
-describe("listOpen et touch", () => {
+describe("listOpen", () => {
 	it("ne liste que les sessions en attente", () => {
 		const a = create("A");
 		const b = create("B");
 		store.decline(a.id, "");
 		expect(store.listOpen().map((s) => s.id)).toEqual([b.id]);
 	});
+});
 
-	it("renseigne lastSeenAt", () => {
-		const s = create();
-		expect(s.lastSeenAt).toBeNull();
-		store.touch(s.id);
-		expect(store.get(s.id)?.lastSeenAt).not.toBeNull();
+describe("taille du journal WAL", () => {
+	let dir: string;
+	beforeEach(() => {
+		dir = mkdtempSync(join(tmpdir(), "aq-"));
+	});
+	afterEach(() => {
+		rmSync(dir, { recursive: true, force: true });
+	});
+
+	const walSize = (file: string) => (existsSync(`${file}-wal`) ? statSync(`${file}-wal`).size : 0);
+
+	it("reste borné malgré de nombreuses écritures sur des pages différentes", () => {
+		const file = join(dir, "db.sqlite");
+		const s = new SessionStore(file);
+		const prompt = "x".repeat(3000);
+		let max = 0;
+		for (let i = 0; i < 600; i++) {
+			s.findOrCreate({ title: `Session ${i}`, questions: [textQuestion({ prompt })] });
+			max = Math.max(max, walSize(file));
+		}
+		// Par défaut SQLite laisse le WAL monter à ~4 Mo (1000 pages) avant de le replier : ce scénario y arrive.
+		expect(max).toBeLessThan(600_000);
+		s.close();
+	});
+
+	it("vide au démarrage le WAL qu'un arrêt brutal a laissé", () => {
+		const file = join(dir, "db.sqlite");
+		const crashed = new DatabaseSync(file);
+		crashed.exec("PRAGMA journal_mode = WAL; PRAGMA wal_autocheckpoint = 0; CREATE TABLE t (x TEXT)");
+		for (let i = 0; i < 400; i++) {
+			crashed.prepare("INSERT INTO t VALUES (?)").run("x".repeat(3000));
+		}
+		expect(walSize(file)).toBeGreaterThan(1_000_000);
+
+		const s = new SessionStore(file);
+		// Il reste les quelques pages écrites par la création du schéma, pas le Mo laissé par l'arrêt brutal.
+		expect(walSize(file)).toBeLessThan(100_000);
+		s.close();
+		crashed.close();
 	});
 });
 

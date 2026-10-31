@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from "@angular/common/http";
-import { DestroyRef, Injectable, computed, inject, signal } from "@angular/core";
+import { DestroyRef, Injectable, computed, effect, inject, signal } from "@angular/core";
 import {
 	type Answer,
 	type Answers,
@@ -11,6 +11,7 @@ import {
 	isRequired,
 } from "@agent-questions/shared";
 import { ApiService } from "../../core/api";
+import { LiveService } from "../../core/live";
 
 /** `answered` et `declined` : confirmation juste après l'action ; `closed` : session passée, en lecture seule. */
 export type ViewState = "loading" | "missing" | "ready" | "answered" | "declined" | "closed";
@@ -28,9 +29,12 @@ export const DRAFT_DELAY_MS = 600;
 export class SessionState {
 	private readonly api = inject(ApiService);
 	private readonly destroyRef = inject(DestroyRef);
+	private readonly live = inject(LiveService);
 
 	private id = "";
 	private saveTimer?: ReturnType<typeof setTimeout>;
+	/** Saisie pas encore enregistrée dans le brouillon. */
+	private dirty = false;
 
 	readonly state = signal<ViewState>("loading");
 	readonly session = signal<SessionView | null>(null);
@@ -40,6 +44,8 @@ export class SessionState {
 	readonly error = signal<string | null>(null);
 	/** Vrai quand l'agent a modifié les questions depuis l'ouverture de la page. */
 	readonly updated = signal(false);
+	/** Nouvelle version des questions envoyée par l'agent, pas encore affichée : l'utilisateur choisit quand l'afficher. */
+	readonly pendingUpdate = signal<SessionView | null>(null);
 
 	readonly doneCount = computed(() => {
 		const s = this.session();
@@ -49,10 +55,20 @@ export class SessionState {
 		const s = this.session();
 		return s ? s.questions.filter((q) => isRequired(q) && !this.done(q)).length : 0;
 	});
-	readonly canSubmit = computed(() => this.missing() === 0);
+	/** L'envoi est suspendu tant que la nouvelle version des questions n'est pas affichée : le serveur valide contre elle. */
+	readonly canSubmit = computed(() => this.missing() === 0 && !this.pendingUpdate());
 
 	constructor() {
-		this.destroyRef.onDestroy(() => clearTimeout(this.saveTimer));
+		// Tant qu'un formulaire est affiché, de nouvelles questions sont proposées plutôt qu'ouvertes d'office.
+		effect(() => this.live.editing.set(this.state() === "ready"));
+		this.destroyRef.onDestroy(() => {
+			this.live.editing.set(false);
+			clearTimeout(this.saveTimer);
+			// L'onglet peut quitter la page à tout moment (nouvelles questions de l'agent) : on n'y perd pas la saisie.
+			if (this.dirty) {
+				void this.saveDraft();
+			}
+		});
 	}
 
 	/** Charge la session puis surveille ses modifications. */
@@ -74,7 +90,7 @@ export class SessionState {
 		this.destroyRef.onDestroy(() => clearInterval(timer));
 	}
 
-	/** Détecte une modification des questions par l'agent (ou la clôture de la session) et met la vue à jour. */
+	/** Détecte une modification des questions par l'agent (la propose, sans l'appliquer) ou la clôture de la session. */
 	private async refresh(): Promise<void> {
 		const current = this.session();
 		if (this.state() !== "ready" || !current || this.sending()) {
@@ -88,25 +104,35 @@ export class SessionState {
 			if (s.status === "declined") {
 				return this.state.set("declined");
 			}
-			if (s.revision === current.revision) {
+			if (s.revision === current.revision || s.revision === this.pendingUpdate()?.revision) {
 				return;
 			}
-			// Les réponses en cours de saisie priment sur le brouillon, mais seulement pour les options qui existent encore.
-			const local = this.answers();
-			this.answers.set(
-				Object.fromEntries(
-					s.questions.map((q) => {
-						const a = local[q.id] ?? s.draft[q.id] ?? emptyAnswer();
-						const known = new Set((q.options ?? []).map((o) => o.id));
-						return [q.id, { ...a, selected: a.selected.filter((id) => known.has(id)) }];
-					}),
-				),
-			);
-			this.session.set(s);
-			this.updated.set(true);
+			this.pendingUpdate.set(s);
 		} catch {
 			/* non bloquant : prochaine tentative au prochain tour */
 		}
+	}
+
+	/** Affiche la nouvelle version des questions proposée par l'agent, en conservant les réponses déjà saisies. */
+	applyUpdate(): void {
+		const s = this.pendingUpdate();
+		if (!s) {
+			return;
+		}
+		// Les réponses en cours de saisie priment sur le brouillon, mais seulement pour les options qui existent encore.
+		const local = this.answers();
+		this.answers.set(
+			Object.fromEntries(
+				s.questions.map((q) => {
+					const a = local[q.id] ?? s.draft[q.id] ?? emptyAnswer();
+					const known = new Set((q.options ?? []).map((o) => o.id));
+					return [q.id, { ...a, selected: a.selected.filter((id) => known.has(id)) }];
+				}),
+			),
+		);
+		this.session.set(s);
+		this.pendingUpdate.set(null);
+		this.updated.set(true);
 	}
 
 	answerFor(q: Question): Answer {
@@ -120,11 +146,13 @@ export class SessionState {
 	/** Enregistre une saisie et programme l'enregistrement du brouillon. */
 	onAnswer(questionId: string, answer: Answer): void {
 		this.answers.update((cur) => ({ ...cur, [questionId]: answer }));
+		this.dirty = true;
 		clearTimeout(this.saveTimer);
 		this.saveTimer = setTimeout(() => void this.saveDraft(), DRAFT_DELAY_MS);
 	}
 
 	private async saveDraft(): Promise<void> {
+		this.dirty = false;
 		try {
 			await this.api.saveDraft(this.id, this.answers());
 			this.savedAt.set(new Date());
@@ -135,6 +163,7 @@ export class SessionState {
 
 	async submit(): Promise<void> {
 		clearTimeout(this.saveTimer);
+		this.dirty = false;
 		this.sending.set(true);
 		this.error.set(null);
 		try {
@@ -149,6 +178,7 @@ export class SessionState {
 
 	async decline(reason: string): Promise<void> {
 		clearTimeout(this.saveTimer);
+		this.dirty = false;
 		this.error.set(null);
 		try {
 			await this.api.decline(this.id, reason);

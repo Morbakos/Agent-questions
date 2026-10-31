@@ -32,6 +32,12 @@ export interface SessionHistory {
 	nextBefore: number | null;
 }
 
+/** Événement `new-session` du flux `/api/events` : l'agent vient d'envoyer de nouvelles questions. */
+export interface UiNewSessionEvent {
+	sessionId: string;
+	title: string;
+}
+
 /** Corps d'erreur de l'API de l'UI. */
 export interface ApiError {
 	error?: string;

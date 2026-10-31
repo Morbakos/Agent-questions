@@ -1,8 +1,10 @@
+import { get } from "node:http";
 import type { FastifyInstance } from "fastify";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildApp } from "./http.js";
 import { SessionStore } from "./session-store.js";
 import { singleQuestion, testConfig, textQuestion } from "./test-helpers.js";
+import { UiHub } from "./ui-hub.js";
 
 let app: FastifyInstance;
 let store: SessionStore;
@@ -80,11 +82,10 @@ describe("API de l'UI", () => {
 		expect(res.statusCode).toBe(400);
 	});
 
-	it("renvoie la vue d'une session, avec sa révision, et la marque comme vue", async () => {
+	it("renvoie la vue d'une session, avec sa révision", async () => {
 		const s = create();
 		const res = await app.inject({ method: "GET", url: `/api/sessions/${s.id}`, headers });
 		expect(res.json()).toMatchObject({ id: s.id, status: "pending", revision: 0, answers: null });
-		expect(store.get(s.id)?.lastSeenAt).not.toBeNull();
 	});
 
 	it("répond 404 pour une session inconnue", async () => {
@@ -154,6 +155,39 @@ describe("API de l'UI", () => {
 		store.updateQuestions(s.id, undefined, [textQuestion()]);
 		const res = await app.inject({ method: "GET", url: `/api/sessions/${s.id}`, headers });
 		expect(res.json().revision).toBe(1);
+	});
+});
+
+describe("flux d'événements de l'UI", () => {
+	it("laisse la connexion ouverte et transmet les annonces de nouvelle session", async () => {
+		const hub = new UiHub();
+		const live = await buildApp(store, testConfig(), hub);
+		try {
+			const address = await live.listen({ port: 0, host: "127.0.0.1" });
+			const chunks: string[] = [];
+			const contentType = await new Promise<string | undefined>((resolve) => {
+				const req = get(
+					{ host: "127.0.0.1", port: new URL(address).port, path: "/api/events", headers },
+					(res) => {
+						res.setEncoding("utf8");
+						res.on("data", (chunk: string) => {
+							chunks.push(chunk);
+							if (chunks.length === 1) {
+								hub.announce({ id: "s1", title: "Titre" });
+							} else {
+								req.destroy();
+								resolve(res.headers["content-type"]);
+							}
+						});
+					},
+				);
+			});
+			expect(contentType).toBe("text/event-stream");
+			expect(chunks[0]).toContain(": connecté");
+			expect(chunks[1]).toBe('event: new-session\ndata: {"sessionId":"s1","title":"Titre"}\n\n');
+		} finally {
+			await live.close();
+		}
 	});
 });
 

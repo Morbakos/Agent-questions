@@ -1,4 +1,4 @@
-// Construit le paquet publié `@morbakos/agent-questions` (packages/server) : un seul fichier `dist/index.js`
+// Construit le bundle interne du workspace `@agent-questions/server` : un seul fichier `dist/index.js`
 // (shared inliné, dépendances externes) et l'UI Angular copiée dans `dist/ui`.
 // Échoue si l'UI n'est pas construite : un paquet sans UI serait inutilisable.
 import { build } from "esbuild";

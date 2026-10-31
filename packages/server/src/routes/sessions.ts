@@ -24,7 +24,6 @@ export function registerSessionRoutes(app: FastifyInstance, store: SessionStore)
 		if (!s) {
 			throw new HttpError(404, "Session introuvable");
 		}
-		store.touch(s.id);
 		return view(s);
 	});
 
