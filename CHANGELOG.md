@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [0.1.1]
 
 Current version in `package.json`. The git history starts with a single initial commit, so this entry describes the
+- Startup, configuration and script messages (terminal output) are now in English; the UI and API error messages stay
+  in French.
 state of the project at that point rather than a list of changes.
 
 ### Added

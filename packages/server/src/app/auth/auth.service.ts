@@ -52,7 +52,7 @@ export class AuthService implements OnApplicationBootstrap {
 		) {
 			// Checked here, not in `loadConfig`: the value is only used (and so only matters) when the first admin is created.
 			throw new ConfigError(
-				`AQ_ADMIN_PASSWORD doit faire entre ${PASSWORD_MIN_LENGTH} et ${PASSWORD_MAX_LENGTH} caractères.`,
+				`AQ_ADMIN_PASSWORD must be between ${PASSWORD_MIN_LENGTH} and ${PASSWORD_MAX_LENGTH} characters long.`,
 			);
 		}
 		const password = configured ?? randomBytes(15).toString("base64url");

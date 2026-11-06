@@ -4,7 +4,7 @@ Agent Questions is configured only through environment variables prefixed `AQ_`.
 `.env` loading: set the variables in the process environment (shell, `docker run -e`, `docker-compose.yml`, systemd
 unit). The values are read and validated once, at startup, by `loadConfig` in `packages/server/src/app/config/config.ts`.
 
-On any invalid value the server prints `Configuration invalide : <message>` (the message names the variable, never a
+On any invalid value the server prints `Invalid configuration: <message>` (the message names the variable, never a
 secret) and exits with code 1. Nothing is started in a dangerous combination.
 
 For how to deploy each profile, see [Deployment profiles](../operations/deployment-profiles.md).
@@ -47,7 +47,7 @@ variables: `AQ_PORT=` is rejected, `AQ_WAIT_SECONDS=` and `AQ_TRUST_PROXY=` eval
 
 `AQ_BIND_HOST` in the `local` profile must be `127.0.0.1`, `::1`, `[::1]` or `localhost` (case-insensitive). The only
 exception is `0.0.0.0` when `AQ_IN_CONTAINER=1`. Any other value stops the server with:
-`AQ_BIND_HOST="<value>" est refusé en profil local : utilisez 127.0.0.1, ::1 ou localhost (ou AQ_DEPLOYMENT_MODE=server, avec comptes et mots de passe, pour une exposition réseau).`
+`AQ_BIND_HOST="<value>" is refused in the local profile: use 127.0.0.1, ::1 or localhost (or AQ_DEPLOYMENT_MODE=server, with accounts and passwords, for network exposure).`
 
 In the `server` profile the default is still `127.0.0.1`: set `AQ_BIND_HOST=0.0.0.0` (or the interface of your proxy)
 explicitly if the reverse proxy is on another host or container.
@@ -103,25 +103,23 @@ The Docker image sets `AQ_BIND_HOST=0.0.0.0`, `AQ_IN_CONTAINER=1`, `AQ_NO_OPEN=1
 
 ## Startup validation errors
 
-Messages are in French; the gloss is in parentheses.
-
 | Condition                                                                 | Message                                                                                                        |
 | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `AQ_DEPLOYMENT_MODE` is neither `local` nor `server`                       | `AQ_DEPLOYMENT_MODE doit valoir "local" ou "server" (reçu : "<valeur>").`                                       |
-| `AQ_PORT` not an integer in 1-65535                                       | `AQ_PORT doit être un port TCP valide (1-65535).`                                                              |
-| Non-loopback `AQ_BIND_HOST` in the local profile                           | `AQ_BIND_HOST="<valeur>" est refusé en profil local : ...` (see above)                                         |
-| `AQ_ALLOWED_ORIGINS` contains `*`                                         | `AQ_ALLOWED_ORIGINS n'accepte aucun joker : listez les origines exactes.`                                      |
-| An `AQ_ALLOWED_ORIGINS` entry is not a URL                                | `AQ_ALLOWED_ORIGINS n'est pas une URL valide.`                                                                 |
-| An `AQ_ALLOWED_ORIGINS` entry has a path, trailing slash or is not an origin | `AQ_ALLOWED_ORIGINS : "<valeur>" doit être une origine (schéma, hôte, port), sans chemin.`                  |
-| `AQ_WAIT_SECONDS` not an integer in 0-3600                                | `AQ_WAIT_SECONDS doit être un entier entre 0 et 3600.`                                                         |
-| `AQ_TRUST_PROXY` not an integer in 0-10                                   | `AQ_TRUST_PROXY doit être le nombre de reverse proxys de confiance (0 à 10).`                                  |
-| `AQ_LOG` not in the list                                                  | `AQ_LOG doit valoir l'un de : fatal, error, warn, info, debug, trace, silent.`                                 |
-| `AQ_ADMIN_USERNAME` invalid (server)                                      | `AQ_ADMIN_USERNAME : 3 à 40 caractères (lettres, chiffres, point, tiret, tiret bas).`                          |
-| `AQ_ADMIN_PASSWORD` length out of range (server, first admin creation)    | `AQ_ADMIN_PASSWORD doit faire entre 10 et 200 caractères.` (only when the admin is created, not at each start) |
-| `AQ_PUBLIC_URL` missing (server)                                          | `Le profil server exige AQ_PUBLIC_URL (URL publique, en HTTPS derrière le reverse proxy).`                     |
-| `AQ_PUBLIC_URL` not a URL                                                 | `AQ_PUBLIC_URL n'est pas une URL valide.`                                                                      |
-| `AQ_PUBLIC_URL` not HTTPS and host not loopback (server)                  | `AQ_PUBLIC_URL doit être en HTTPS en profil server.`                                                           |
-| `AQ_DATA_DIR` missing (server)                                            | `Le profil server exige AQ_DATA_DIR (volume persistant dédié à la base SQLite).`                               |
+| `AQ_DEPLOYMENT_MODE` is neither `local` nor `server`                       | `AQ_DEPLOYMENT_MODE must be "local" or "server" (received: "<value>").`                                       |
+| `AQ_PORT` not an integer in 1-65535                                       | `AQ_PORT must be a valid TCP port (1-65535).`                                                              |
+| Non-loopback `AQ_BIND_HOST` in the local profile                           | `AQ_BIND_HOST="<value>" is refused in the local profile: ...` (see above)                                         |
+| `AQ_ALLOWED_ORIGINS` contains `*`                                         | `AQ_ALLOWED_ORIGINS accepts no wildcard: list the exact origins.`                                      |
+| An `AQ_ALLOWED_ORIGINS` entry is not a URL                                | `AQ_ALLOWED_ORIGINS is not a valid URL.`                                                                 |
+| An `AQ_ALLOWED_ORIGINS` entry has a path, trailing slash or is not an origin | `AQ_ALLOWED_ORIGINS: "<value>" must be an origin (scheme, host, port) without a path.`                  |
+| `AQ_WAIT_SECONDS` not an integer in 0-3600                                | `AQ_WAIT_SECONDS must be an integer between 0 and 3600.`                                                         |
+| `AQ_TRUST_PROXY` not an integer in 0-10                                   | `AQ_TRUST_PROXY must be the number of trusted reverse proxies (0 to 10).`                                  |
+| `AQ_LOG` not in the list                                                  | `AQ_LOG must be one of: fatal, error, warn, info, debug, trace, silent.`                                 |
+| `AQ_ADMIN_USERNAME` invalid (server)                                      | `AQ_ADMIN_USERNAME: 3 to 40 characters (letters, digits, dot, hyphen, underscore).`                          |
+| `AQ_ADMIN_PASSWORD` length out of range (server, first admin creation)    | `AQ_ADMIN_PASSWORD must be between 10 and 200 characters long.` (only when the admin is created, not at each start) |
+| `AQ_PUBLIC_URL` missing (server)                                          | `The server profile requires AQ_PUBLIC_URL (public URL, HTTPS behind the reverse proxy).`                     |
+| `AQ_PUBLIC_URL` not a URL                                                 | `AQ_PUBLIC_URL is not a valid URL.`                                                                      |
+| `AQ_PUBLIC_URL` not HTTPS and host not loopback (server)                  | `AQ_PUBLIC_URL must be HTTPS in the server profile.`                                                           |
+| `AQ_DATA_DIR` missing (server)                                            | `The server profile requires AQ_DATA_DIR (persistent volume dedicated to the SQLite database).`                               |
 
 Loopback hosts for the HTTPS exception are `127.0.0.1`, `::1`, `[::1]` and `localhost`.
 

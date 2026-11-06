@@ -210,7 +210,9 @@ Deux profils. **Local** : pas de compte, écoute sur `127.0.0.1`, à ne pas expo
 
 ## Règles et conventions
 
-- Textes de l'UI et messages d'erreur renvoyés par l'API en **français** ; tout le reste en **anglais** : documentation
+- Textes de l'UI et messages d'erreur renvoyés par l'API en **français** (l'UI les affiche tels quels) ; tout le reste en
+  **anglais**, y compris les messages de terminal (erreurs de configuration, bannière de démarrage, stderr du lanceur
+  `--stdio`, scripts de build) : documentation
   (README, `docs/`, CONTRIBUTING…), commentaires de code (aucun commentaire français ne doit subsister), descriptions de
   tests (`describe` / `it`), identifiants et descriptions d'outils MCP. Les messages de commit sont en anglais. Ce
   `CLAUDE.md` reste en français.

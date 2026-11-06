@@ -31,7 +31,7 @@ async function waitHealthy(url: string, child: ChildProcess, log: () => string):
 	const deadline = Date.now() + 30_000;
 	while (Date.now() < deadline) {
 		if (child.exitCode !== null) {
-			throw new Error(`le serveur s'est arrêté (code ${child.exitCode}) :\n${log()}`);
+			throw new Error(`the server exited (code ${child.exitCode}):\n${log()}`);
 		}
 		try {
 			if ((await fetch(`${url}/health`)).ok) {
@@ -42,7 +42,7 @@ async function waitHealthy(url: string, child: ChildProcess, log: () => string):
 		}
 		await new Promise((resolve) => setTimeout(resolve, 150));
 	}
-	throw new Error(`le serveur ne répond pas sur ${url} :\n${log()}`);
+	throw new Error(`the server does not answer on ${url}:\n${log()}`);
 }
 
 /** Starts `dist/index.js` on a free port with a temporary database. `env` extends or overrides the configuration. */

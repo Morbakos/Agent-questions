@@ -16,7 +16,7 @@ const dir = await mkdtemp(join(tmpdir(), "agent-questions-pack-"));
 try {
 	run(["pm", "pack", "--destination", dir]);
 	const tarball = (await readdir(dir)).find((file) => file.endsWith(".tgz"));
-	if (!tarball) throw new Error("Aucun tarball produit");
+	if (!tarball) throw new Error("No tarball produced");
 	for (const runtime of ["node", "bun"]) run(["scripts/verify-package.ts", join(dir, tarball), runtime]);
 } finally {
 	await rm(dir, { recursive: true, force: true });
