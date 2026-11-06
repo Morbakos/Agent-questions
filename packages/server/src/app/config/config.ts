@@ -93,14 +93,14 @@ function parseUrl(name: string, value: string): URL {
 	try {
 		return new URL(value);
 	} catch {
-		throw new ConfigError(`${name} n'est pas une URL valide.`);
+		throw new ConfigError(`${name} is not a valid URL.`);
 	}
 }
 
 function parseMode(env: NodeJS.ProcessEnv): DeploymentMode {
 	const mode = env.AQ_DEPLOYMENT_MODE ?? "local";
 	if (mode !== "local" && mode !== "server") {
-		throw new ConfigError(`AQ_DEPLOYMENT_MODE doit valoir "local" ou "server" (reçu : "${mode}").`);
+		throw new ConfigError(`AQ_DEPLOYMENT_MODE must be "local" or "server" (received: "${mode}").`);
 	}
 	return mode;
 }
@@ -109,12 +109,12 @@ function parseOrigins(env: NodeJS.ProcessEnv): string[] {
 	const origins = list(env.AQ_ALLOWED_ORIGINS);
 	for (const origin of origins) {
 		if (origin.includes("*")) {
-			throw new ConfigError("AQ_ALLOWED_ORIGINS n'accepte aucun joker : listez les origines exactes.");
+			throw new ConfigError("AQ_ALLOWED_ORIGINS accepts no wildcard: list the exact origins.");
 		}
 		const url = parseUrl("AQ_ALLOWED_ORIGINS", origin);
 		if (url.origin !== origin) {
 			throw new ConfigError(
-				`AQ_ALLOWED_ORIGINS : "${origin}" doit être une origine (schéma, hôte, port), sans chemin.`,
+				`AQ_ALLOWED_ORIGINS: "${origin}" must be an origin (scheme, host, port) without a path.`,
 			);
 		}
 	}
@@ -124,7 +124,7 @@ function parseOrigins(env: NodeJS.ProcessEnv): string[] {
 function parseWaitSeconds(env: NodeJS.ProcessEnv): number {
 	const value = Number(env.AQ_WAIT_SECONDS ?? 0);
 	if (!Number.isInteger(value) || value < 0 || value > 3600) {
-		throw new ConfigError("AQ_WAIT_SECONDS doit être un entier entre 0 et 3600.");
+		throw new ConfigError("AQ_WAIT_SECONDS must be an integer between 0 and 3600.");
 	}
 	return value;
 }
@@ -132,7 +132,7 @@ function parseWaitSeconds(env: NodeJS.ProcessEnv): number {
 function parseTrustProxy(env: NodeJS.ProcessEnv): number {
 	const value = Number(env.AQ_TRUST_PROXY ?? 0);
 	if (!Number.isInteger(value) || value < 0 || value > 10) {
-		throw new ConfigError("AQ_TRUST_PROXY doit être le nombre de reverse proxys de confiance (0 à 10).");
+		throw new ConfigError("AQ_TRUST_PROXY must be the number of trusted reverse proxies (0 to 10).");
 	}
 	return value;
 }
@@ -142,7 +142,7 @@ const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"
 function parseLogLevel(env: NodeJS.ProcessEnv): string {
 	const level = env.AQ_LOG ?? "info";
 	if (!LOG_LEVELS.includes(level)) {
-		throw new ConfigError(`AQ_LOG doit valoir l'un de : ${LOG_LEVELS.join(", ")}.`);
+		throw new ConfigError(`AQ_LOG must be one of: ${LOG_LEVELS.join(", ")}.`);
 	}
 	return level;
 }
@@ -150,7 +150,7 @@ function parseLogLevel(env: NodeJS.ProcessEnv): string {
 function parseAdmin(env: NodeJS.ProcessEnv): AdminBootstrap {
 	const username = env.AQ_ADMIN_USERNAME || "admin";
 	if (!/^[A-Za-z0-9][A-Za-z0-9._-]{2,39}$/.test(username)) {
-		throw new ConfigError("AQ_ADMIN_USERNAME : 3 à 40 caractères (lettres, chiffres, point, tiret, tiret bas).");
+		throw new ConfigError("AQ_ADMIN_USERNAME: 3 to 40 characters (letters, digits, dot, hyphen, underscore).");
 	}
 	// The password length is NOT checked here: the variable is only used when the first admin is created, so a
 	// leftover bad value must not prevent later starts. `AuthService.bootstrapAdmin` checks it at creation time.
@@ -175,7 +175,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 	const host = env.AQ_BIND_HOST ?? "127.0.0.1";
 	const port = Number(env.AQ_PORT ?? 4317);
 	if (!Number.isInteger(port) || port < 1 || port > 65535) {
-		throw new ConfigError("AQ_PORT doit être un port TCP valide (1-65535).");
+		throw new ConfigError("AQ_PORT must be a valid TCP port (1-65535).");
 	}
 	const allowedOrigins = parseOrigins(env);
 	const dataDir = env.AQ_DATA_DIR ? expandHome(env.AQ_DATA_DIR) : join(homedir(), ".agent-questions");
@@ -187,23 +187,25 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 		// the host (127.0.0.1:4317:4317) is what limits exposure.
 		if (!isLoopbackHost(host) && !(inContainer && host === "0.0.0.0")) {
 			throw new ConfigError(
-				`AQ_BIND_HOST="${host}" est refusé en profil local : utilisez 127.0.0.1, ::1 ou localhost ` +
-					"(ou AQ_DEPLOYMENT_MODE=server, avec comptes et mots de passe, pour une exposition réseau).",
+				`AQ_BIND_HOST="${host}" is refused in the local profile: use 127.0.0.1, ::1 or localhost ` +
+					"(or AQ_DEPLOYMENT_MODE=server, with accounts and passwords, for network exposure).",
 			);
 		}
 	} else {
 		admin = parseAdmin(env);
 		if (!env.AQ_PUBLIC_URL) {
 			throw new ConfigError(
-				"Le profil server exige AQ_PUBLIC_URL (URL publique, en HTTPS derrière le reverse proxy).",
+				"The server profile requires AQ_PUBLIC_URL (public URL, HTTPS behind the reverse proxy).",
 			);
 		}
 		const url = parseUrl("AQ_PUBLIC_URL", publicUrl);
 		if (url.protocol !== "https:" && !isLoopbackHost(url.hostname)) {
-			throw new ConfigError("AQ_PUBLIC_URL doit être en HTTPS en profil server.");
+			throw new ConfigError("AQ_PUBLIC_URL must be HTTPS in the server profile.");
 		}
 		if (!env.AQ_DATA_DIR) {
-			throw new ConfigError("Le profil server exige AQ_DATA_DIR (volume persistant dédié à la base SQLite).");
+			throw new ConfigError(
+				"The server profile requires AQ_DATA_DIR (persistent volume dedicated to the SQLite database).",
+			);
 		}
 	}
 	publicUrl = publicUrl.replace(/\/+$/, "");

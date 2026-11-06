@@ -17,10 +17,10 @@ for (const [name, range] of Object.entries(server as Record<string, string>)) {
 }
 
 if (problems.length > 0) {
-	console.error("Dépendances d'exécution désalignées entre packages/server et le paquet racine :");
+	console.error("Runtime dependencies out of sync between packages/server and the root package:");
 	for (const problem of problems) {
 		console.error(`  - ${problem}`);
 	}
 	process.exit(1);
 }
-console.log("Dépendances d'exécution alignées (packages/server ⊆ paquet racine).");
+console.log("Runtime dependencies aligned (packages/server ⊆ root package).");

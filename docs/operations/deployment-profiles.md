@@ -2,7 +2,7 @@
 
 The profile is chosen with `AQ_DEPLOYMENT_MODE` (`local` by default, or `server`). Any other value stops the server at
 startup. All variables are read once, at startup, and validated: an invalid or dangerous combination prevents the
-server from starting and the error (`Configuration invalide : ...`) names the variable to fix.
+server from starting and the error (`Invalid configuration: ...`) names the variable to fix.
 
 | Aspect             | `local`                                         | `server`                                                   |
 | ------------------ | ----------------------------------------------- | ---------------------------------------------------------- |

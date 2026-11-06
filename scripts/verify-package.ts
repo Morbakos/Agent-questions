@@ -9,7 +9,7 @@ import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 const tarball = process.argv[2];
 if (!tarball) throw new Error("Usage: bun scripts/verify-package.ts <package.tgz> [node|bun]");
 const runtime = process.argv[3] ?? "node";
-if (runtime !== "node" && runtime !== "bun") throw new Error(`Runtime inconnu : ${runtime}`);
+if (runtime !== "node" && runtime !== "bun") throw new Error(`Unknown runtime: ${runtime}`);
 
 const tempDir = await mkdtemp(join(tmpdir(), "agent-questions-package-"));
 const port = 43800 + (process.pid % 1000);

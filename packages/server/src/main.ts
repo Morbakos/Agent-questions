@@ -7,7 +7,7 @@ function readConfig() {
 		return loadConfig();
 	} catch (error) {
 		if (error instanceof ConfigError) {
-			console.error(`Configuration invalide : ${error.message}`);
+			console.error(`Invalid configuration: ${error.message}`);
 			process.exit(1);
 		}
 		throw error;
@@ -22,11 +22,11 @@ app.enableShutdownHooks();
 await app.listen(config.port, config.host);
 
 console.log(`
-Agent Questions prêt (profil ${config.deploymentMode}).
+Agent Questions ready (${config.deploymentMode} profile).
   UI        ${config.baseUrl}
   MCP       ${config.baseUrl}/mcp (MCP Streamable HTTP)
-  Base      ${config.dbFile}
+  Database  ${config.dbFile}
 
-Écoute sur ${config.host}:${config.port}
+Listening on ${config.host}:${config.port}
 Claude Code : claude mcp add --transport http agent-questions http://127.0.0.1:${config.port}/mcp
 `);

@@ -43,12 +43,12 @@ describe("local profile", () => {
 
 describe("allowed origins", () => {
 	it("rejects any wildcard", () => {
-		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "*" })).toThrow(/joker/);
-		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "https://*.example.com" })).toThrow(/joker/);
+		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "*" })).toThrow(/wildcard/);
+		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "https://*.example.com" })).toThrow(/wildcard/);
 	});
 
 	it("requires exact origins", () => {
-		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "https://a.example.com/chemin" })).toThrow(/origine/);
+		expect(() => loadConfig({ AQ_ALLOWED_ORIGINS: "https://a.example.com/chemin" })).toThrow(/must be an origin/);
 		expect(
 			loadConfig({ AQ_ALLOWED_ORIGINS: "http://localhost:8080, http://127.0.0.1:8080" }).allowedOrigins,
 		).toEqual(["http://localhost:8080", "http://127.0.0.1:8080"]);
