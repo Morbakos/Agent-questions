@@ -1,0 +1,62 @@
+@use "mixins" as *;
+
+.field {
+	width: 100%;
+	font: inherit;
+	color: inherit;
+	background: var(--surface);
+	border: 1px solid var(--rule);
+	border-radius: 8px;
+	padding: 0.55rem 0.75rem;
+
+	&:is(textarea) {
+		resize: vertical;
+		min-height: 6rem;
+		field-sizing: content;
+	}
+}
+
+.btn {
+	font: inherit;
+	font-weight: 600;
+	padding: 0.6rem 1.1rem;
+	border-radius: 8px;
+	border: 1px solid var(--rule);
+	background: var(--surface);
+	color: var(--ink);
+	cursor: pointer;
+	@include soft-transition(border-color 0.12s, background-color 0.12s);
+
+	&:hover:not(:disabled) {
+		border-color: var(--accent);
+	}
+
+	&:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	&.primary {
+		background: var(--accent);
+		border-color: var(--accent);
+		color: var(--accent-ink);
+	}
+
+	&.danger {
+		border-color: var(--danger);
+		color: var(--danger);
+	}
+
+	&.quiet {
+		align-self: flex-start;
+		border-color: transparent;
+		background: none;
+		color: var(--muted);
+		padding-left: 0;
+	}
+}
+
+.error {
+	color: var(--danger);
+	margin: 0;
+}

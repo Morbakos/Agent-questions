@@ -1,0 +1,46 @@
+.top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 0.9rem 1.5rem;
+	border-bottom: 1px solid var(--rule);
+	background: var(--surface);
+}
+
+.user {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	color: var(--muted);
+}
+
+.brand {
+	font-weight: 700;
+	color: var(--ink);
+	text-decoration: none;
+}
+
+// Offer to go to new questions: top right, so as not to hide the form's submit bar.
+.toast {
+	position: fixed;
+	top: 4rem;
+	right: 1rem;
+	z-index: 10;
+	max-width: min(24rem, calc(100vw - 2rem));
+	display: flex;
+	flex-direction: column;
+	gap: 0.6rem;
+	padding: 0.8rem 1rem;
+	background: var(--surface);
+	border: 1px solid var(--rule);
+	border-left: 3px solid var(--accent);
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+}
+
+.toast-actions {
+	display: flex;
+	gap: 0.6rem;
+	flex-wrap: wrap;
+}

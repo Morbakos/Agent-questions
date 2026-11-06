@@ -1,0 +1,42 @@
+// Markdown content injected by `[innerHTML]`: a component's encapsulated styles do not reach it,
+// so these rules must stay global.
+.md {
+	> :first-child {
+		margin-top: 0;
+	}
+
+	> :last-child {
+		margin-bottom: 0;
+	}
+
+	pre {
+		background: var(--surface);
+		border: 1px solid var(--rule);
+		border-radius: 6px;
+		padding: 0.75rem 1rem;
+		overflow-x: auto;
+	}
+
+	code {
+		background: var(--wash);
+		padding: 0.1em 0.3em;
+		border-radius: 4px;
+	}
+
+	pre code {
+		background: none;
+		padding: 0;
+	}
+
+	table {
+		border-collapse: collapse;
+		display: block;
+		overflow-x: auto;
+	}
+
+	th,
+	td {
+		border: 1px solid var(--rule);
+		padding: 0.3rem 0.6rem;
+	}
+}

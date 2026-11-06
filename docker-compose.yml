@@ -1,0 +1,53 @@
+services:
+  agent-questions:
+    build: .
+    restart: unless-stopped
+    environment:
+      # Host names accepted in addition to 127.0.0.1 and localhost (here: the Docker service name)
+      AQ_ALLOWED_HOSTS: agent-questions
+      AQ_PUBLIC_URL: http://127.0.0.1:4317
+      # Origins allowed to call /mcp from the browser (llama-server UI)
+      AQ_ALLOWED_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
+    ports:
+      - "127.0.0.1:4317:4317"
+    volumes:
+      - aq-data:/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "bun",
+          "-e",
+          "fetch('http://127.0.0.1:'+(process.env.AQ_PORT||4317)+'/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  llama:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    restart: unless-stopped
+    environment:
+      LLAMA_CACHE: /models # the downloaded model survives container re-creation
+    command:
+      - "-hf"
+      - "NobodyWho/Mistral_Ministral-3-8B-Instruct-GGUF:Q4_K_M"
+      - "--jinja" # required for tool calling
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8080"
+      - "-c"
+      - "8192"
+      - "-t"
+      - "8"
+      - "--webui-mcp-proxy" # enable only if the browser is blocked by CORS
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - llama-models:/models
+
+volumes:
+  aq-data:
+  llama-models:

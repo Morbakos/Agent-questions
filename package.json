@@ -1,0 +1,104 @@
+{
+	"name": "@morbakos/agent-questions",
+	"version": "0.1.1",
+	"private": false,
+	"description": "MCP server and web UI that lets an AI agent ask the user long or complex questions.",
+	"keywords": [
+		"mcp",
+		"model-context-protocol",
+		"mcp-server",
+		"ai-agents",
+		"claude-code",
+		"human-in-the-loop",
+		"ask-user",
+		"questions"
+	],
+	"workspaces": [
+		"packages/*"
+	],
+	"engines": {
+		"node": ">=22.13",
+		"bun": ">=1.4"
+	},
+	"scripts": {
+		"build": "bun run --filter '@agent-questions/ui' build && bun run build:server",
+		"build:server": "tsc --noEmit -p packages/server && bun scripts/check-deps.ts && bun scripts/build-server.ts",
+		"start": "node dist/index.js",
+		"dev:server": "bun run --cwd packages/server dev",
+		"dev:ui": "bun run --cwd packages/ui start",
+		"typecheck": "bun run --filter '*' --if-present typecheck && tsc --noEmit -p e2e",
+		"test": "vitest run && bun run test:server && bun run --cwd packages/ui test",
+		"test:server": "bun run --cwd packages/server test && bun run --cwd packages/server test:e2e",
+		"test:e2e": "playwright test",
+		"verify:built": "bun scripts/verify-built.ts",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"prepublishOnly": "bun run build"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.5",
+		"@modelcontextprotocol/client": "^2.4.0",
+		"@modelcontextprotocol/inspector": "2.14.0",
+		"@playwright/test": "^1.64.1",
+		"@types/bun": "^1.4.4",
+		"@types/node": "^26.6.6",
+		"angular-eslint": "^21.4.0",
+		"eslint": "^9.39.5",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.13.0",
+		"prettier": "^3.9.10",
+		"tsx": "^4.19.0",
+		"typescript": "~5.9.3",
+		"typescript-eslint": "^8.72.1",
+		"vitest": "^4.1.12"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Morbakos/agent-questions.git"
+	},
+	"homepage": "https://github.com/Morbakos/agent-questions#readme",
+	"bugs": "https://github.com/Morbakos/agent-questions/issues",
+	"license": "MIT",
+	"author": "Alexis Jacob",
+	"bin": {
+		"agent-questions": "./dist/index.js"
+	},
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"dependencies": {
+		"@fastify/static": "^10.1.8",
+		"@mikro-orm/core": "^7.2.7",
+		"@mikro-orm/decorators": "^7.2.7",
+		"@mikro-orm/migrations": "^7.2.7",
+		"@mikro-orm/nestjs": "^7.1.0",
+		"@mikro-orm/sql": "^7.2.7",
+		"@modelcontextprotocol/node": "^2.1.2",
+		"@modelcontextprotocol/server": "^2.4.0",
+		"@nestjs/authentication": "0.1.4",
+		"@nestjs/common": "^12.3.3",
+		"@nestjs/config": "^12.1.0",
+		"@nestjs/core": "^12.3.3",
+		"@nestjs/mcp": "^0.0.3",
+		"@nestjs/platform-fastify": "^12.3.3",
+		"@nestjs/serve-static": "^12.1.1",
+		"@nestjs/terminus": "^12.1.0",
+		"fastify": "5.12.8",
+		"kysely": "^0.29.8",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.2",
+		"zod": "^4.2.0"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com"
+	},
+	"type": "module",
+	"packageManager": "bun@1.4.4",
+	"overrides": {
+		"fastify": "5.12.8"
+	}
+}

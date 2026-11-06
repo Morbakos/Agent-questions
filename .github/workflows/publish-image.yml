@@ -1,0 +1,96 @@
+name: Publish image
+
+# Builds the Docker image and publishes it to ghcr.io/morbakos/agent-questions.
+# Trigger: a version tag (v1.2.3), or manually to republish an existing tag.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-image-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/morbakos/agent-questions
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # `package.json` (the published npm package's version) is authoritative: the Git tag, and therefore the image
+      # tags, must match it. A manual run must also target a tag, never a branch.
+      - name: Check that the tag matches package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" != "tag" ]]; then
+            echo "::error::Lancer ce workflow sur un tag vX.Y.Z (ref actuelle : $GITHUB_REF)."
+            exit 1
+          fi
+          expected="v$(node -p "require('./package.json').version")"
+          if [[ "$GITHUB_REF_NAME" != "$expected" ]]; then
+            echo "::error::Le tag $GITHUB_REF_NAME ne correspond pas à la version de package.json ($expected)."
+            exit 1
+          fi
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Compute tags and labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest
+
+      # The Dockerfile already starts the package on Bun before producing the image; here we also check the finished
+      # image before any push: an image that does not answer on /health is never published.
+      - name: Build the image (not pushed yet)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: agent-questions:release-check
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify the image starts and answers on /health
+        shell: bash
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f aq-release >/dev/null 2>&1 || true' EXIT
+          docker run -d --name aq-release -p 127.0.0.1:4317:4317 agent-questions:release-check
+          for attempt in $(seq 1 40); do
+            curl --fail --silent http://127.0.0.1:4317/health >/dev/null && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4317/health
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha

@@ -1,0 +1,2 @@
+# Fins de ligne LF partout (Prettier écrit en LF) : évite les conversions CRLF d'autocrlf sous Windows.
+* text=auto eol=lf

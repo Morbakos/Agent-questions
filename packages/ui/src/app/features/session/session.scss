@@ -1,0 +1,135 @@
+@use "mixins" as *;
+
+// Outline on the left, questions on the right.
+.layout {
+	display: grid;
+	grid-template-columns: 15rem minmax(0, 1fr);
+	gap: 3rem;
+	max-width: 70rem;
+	margin: 0 auto;
+	padding: 2rem 1.5rem 4rem;
+}
+
+.outline {
+	position: sticky;
+	top: 1.5rem;
+	align-self: start;
+
+	ol {
+		margin: 0 0 1rem;
+		padding-left: 1.25rem;
+	}
+
+	li {
+		margin: 0.2rem 0;
+	}
+}
+
+.outline-title {
+	color: var(--muted);
+	font-size: 0.9rem;
+	font-weight: 600;
+	margin-bottom: 0.5rem;
+}
+
+.outline-link {
+	all: unset;
+	cursor: pointer;
+	color: var(--ink);
+	border-bottom: 1px solid transparent;
+
+	&:hover {
+		border-bottom-color: var(--rule);
+	}
+
+	&.done {
+		color: var(--ok);
+	}
+
+	&:focus-visible {
+		@include focus-ring;
+	}
+}
+
+.questions {
+	max-width: 44rem;
+}
+
+.notice {
+	padding: 0.6rem 0.9rem;
+	background: var(--wash);
+	border-left: 3px solid var(--accent);
+	border-radius: 4px;
+}
+
+// Past session, read-only.
+.past {
+	margin: 1.5rem 0;
+	padding-top: 1rem;
+	border-top: 1px solid var(--rule);
+}
+
+.past-head {
+	font-size: 1rem;
+	margin-bottom: 0.4rem;
+}
+
+.past-answer {
+	margin-top: 0.75rem;
+	padding: 0.1rem 0.9rem;
+	background: var(--wash);
+	border-left: 3px solid var(--ok);
+	border-radius: 4px;
+}
+
+.past-choice {
+	font-weight: 600;
+}
+
+.past-text {
+	white-space: pre-wrap;
+}
+
+.notice.update {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.9rem;
+	flex-wrap: wrap;
+}
+
+.actions {
+	position: sticky;
+	bottom: 0;
+	padding: 1rem 0 1.25rem;
+	background: linear-gradient(to bottom, transparent, var(--paper) 0.75rem);
+	border-top: 1px solid var(--rule);
+	margin-top: 1rem;
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.actions-row {
+	display: flex;
+	align-items: center;
+	gap: 0.9rem;
+	flex-wrap: wrap;
+}
+
+.decline {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+@media (max-width: 52rem) {
+	.layout {
+		grid-template-columns: 1fr;
+		gap: 1rem;
+	}
+
+	.outline {
+		position: static;
+	}
+}

@@ -1,0 +1,42 @@
+{
+	"name": "@agent-questions/server",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "AQ_DEV=1 nest start --watch --exec bun",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+	},
+	"dependencies": {
+		"@fastify/static": "^10.1.8",
+		"@mikro-orm/core": "^7.2.7",
+		"@mikro-orm/decorators": "^7.2.7",
+		"@mikro-orm/migrations": "^7.2.7",
+		"@mikro-orm/nestjs": "^7.1.0",
+		"@mikro-orm/sql": "^7.2.7",
+		"@modelcontextprotocol/server": "^2.4.0",
+		"@nestjs/authentication": "0.1.4",
+		"@nestjs/common": "^12.3.3",
+		"@nestjs/config": "^12.1.0",
+		"@nestjs/core": "^12.3.3",
+		"@nestjs/mcp": "^0.0.3",
+		"@nestjs/platform-fastify": "^12.3.3",
+		"@nestjs/serve-static": "^12.1.1",
+		"@nestjs/terminus": "^12.1.0",
+		"fastify": "5.12.8",
+		"kysely": "^0.29.8",
+		"reflect-metadata": "^0.2.2",
+		"rxjs": "^7.8.2",
+		"zod": "^4.2.0"
+	},
+	"devDependencies": {
+		"@agent-questions/shared": "workspace:*",
+		"@nestjs/cli": "^12.0.0",
+		"@nestjs/schematics": "^12.0.0",
+		"@nestjs/testing": "^12.3.3",
+		"vite": "^8.0.0"
+	}
+}

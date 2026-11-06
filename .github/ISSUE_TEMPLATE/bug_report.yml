@@ -1,0 +1,69 @@
+name: Bug report
+description: Something does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a security vulnerability, use the "Security vulnerability" template instead (see SECURITY.md). Never paste tokens or passwords.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package or image version (see package.json or the image tag).
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How you run the server
+      options:
+        - Docker
+        - From source (bun run start)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Runtime
+      options:
+        - Node
+        - Bun
+        - Docker image (Bun)
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Deployment profile
+      options:
+        - local
+        - server
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: Agent / MCP client and version
+      placeholder: Claude Code 2.x, Codex, Cursor, llama-server...
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the `ask_user` arguments if relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs
+      description: Relevant lines, ideally with `AQ_LOG=debug`. Remove secrets.
+      render: text

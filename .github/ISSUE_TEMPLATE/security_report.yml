@@ -1,0 +1,46 @@
+name: Security vulnerability
+description: Report a vulnerability (public issue, see SECURITY.md)
+title: "[Security] "
+labels: ["security"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Read SECURITY.md for the scope first. Never paste tokens, passwords or personal data.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Package or image version (see package.json or the image tag).
+      placeholder: "0.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: profile
+    attributes:
+      label: Deployment profile
+      options:
+        - local
+        - server
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description and impact
+      description: What is the vulnerability and what can an attacker do with it?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      options:
+        - label: I did not include any real credential, token or personal data.
+          required: true

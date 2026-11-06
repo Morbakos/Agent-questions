@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+**/.angular
+.git
+*.sqlite
+.env*
+.mcp.json
+.claude
+.github
+test-results
+playwright-report
+docs
+*.tsbuildinfo

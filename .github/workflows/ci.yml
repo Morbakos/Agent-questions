@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies from the committed lockfile
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Check formatting
+        run: bun run format:check
+
+      - name: Test all projects
+        run: bun run test
+
+      - name: Build all projects
+        run: bun run build
+
+      - name: Install the browser for end-to-end tests
+        run: bunx playwright install --with-deps chromium
+
+      - name: End-to-end tests (built server, real browser, real MCP calls)
+        run: bun run test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: test-results/
+          retention-days: 7
+
+      - name: Pack the published package
+        run: bun pm pack --destination "$RUNNER_TEMP"
+
+      - name: Verify packed package
+        shell: bash
+        run: |
+          set -euo pipefail
+          tarball="$(find "$RUNNER_TEMP" -maxdepth 1 -name 'morbakos-agent-questions-*.tgz' -print -quit)"
+          test -n "$tarball"
+          # The server must run on both runtimes: Node (npx) and Bun (Docker image, bunx).
+          bun scripts/verify-package.ts "$tarball" node
+          bun scripts/verify-package.ts "$tarball" bun
+
+      - name: Build Docker image
+        run: docker build -t agent-questions:ci .
+
+      - name: Verify Docker health and persistent data
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker volume create aq-ci-data >/dev/null
+          cleanup() {
+            docker rm -f aq-ci >/dev/null 2>&1 || true
+            docker volume rm aq-ci-data >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run -d --name aq-ci -p 127.0.0.1:4317:4317 -v aq-ci-data:/data agent-questions:ci
+          for attempt in $(seq 1 40); do
+            curl --fail --silent http://127.0.0.1:4317/health >/dev/null && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4317/health
+          # Local profile (the image's one): every session belongs to the fixed user "local".
+          # No apostrophe in the bun script below: it is delimited by apostrophes.
+          docker exec aq-ci bun -e '
+            import { DatabaseSync } from "node:sqlite";
+            const db = new DatabaseSync("/data/agent-questions.sqlite");
+            db.prepare("INSERT INTO sessions (id, hash, title, questions, status, created_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?)")
+              .run("ci-persistence-smoke", "ci-persistence-smoke", "Docker persistence smoke", "[]", "pending", Date.now(), "local");
+            db.close();
+          '
+          curl --fail --silent http://127.0.0.1:4317/api/sessions | grep -q "Docker persistence smoke"
+          docker restart aq-ci >/dev/null
+          for attempt in $(seq 1 40); do
+            curl --fail --silent http://127.0.0.1:4317/health >/dev/null && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:4317/api/sessions | grep -q "Docker persistence smoke"

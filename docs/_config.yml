@@ -1,0 +1,13 @@
+# GitHub Pages configuration (source: the /docs folder of the main branch).
+# Theme provided by GitHub Pages, no extra dependency.
+title: Agent Questions
+description: An MCP server and web UI that lets an agent ask the user long or complex questions.
+lang: en
+theme: jekyll-theme-cayman
+
+# Turns relative links to .md files into links to the published pages.
+plugins:
+  - jekyll-relative-links
+relative_links:
+  enabled: true
+  collections: false
