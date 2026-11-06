@@ -9,7 +9,7 @@ Docker is the simplest way (the container restarts with Docker):
 
 ```bash
 docker run -d --name agent-questions --restart unless-stopped \
-  -p 127.0.0.1:4317:4317 -v aq-data:/data ghcr.io/morbakos/agent-questions:latest
+  -p 127.0.0.1:4317:4317 -v ~/.agent-questions:/data ghcr.io/morbakos/agent-questions:latest
 ```
 
 Always publish the port on `127.0.0.1` (`-p 127.0.0.1:4317:4317`). Without the host address Docker exposes the server
@@ -22,6 +22,36 @@ In Docker the browser cannot be opened for you. The agent is told to give you th
 the UI lists pending questions by itself. See [Troubleshooting](troubleshooting.md#the-browser-does-not-open).
 
 ## 2. Register the server with your client
+
+There are two ways to declare Agent Questions: over HTTP (the server is already running, e.g. in Docker), or through
+the stdio launcher below. Both end up on the same single shared server.
+
+### Option B: stdio launcher (no Docker)
+
+`agent-questions --stdio` is a small bridge that a client starts like any stdio MCP server:
+
+1. it probes `GET /health` on `http://127.0.0.1:<AQ_PORT or 4317>`;
+2. if nothing answers, it starts the server as a detached background process (log: `<data dir>/server.log`) and waits
+   up to 15 seconds for it;
+3. it relays the MCP messages between stdio and `/mcp`.
+
+The server it starts is the shared one: it keeps running when the agent exits and the launcher never stops it. Several
+agents started together get a single server (a lock file in the data directory serialises the start).
+
+```bash
+claude mcp add --scope user agent-questions -- npx -y @morbakos/agent-questions --stdio
+```
+
+For clients with a JSON file: `"command": "npx"`, `"args": ["-y", "@morbakos/agent-questions", "--stdio"]`.
+
+- `AQ_MCP_URL`: full URL of a remote `/mcp` endpoint. The launcher then never starts a server.
+- `AQ_TOKEN`: API token sent as `Authorization: Bearer ...` (server profile).
+- `AQ_PORT`, `AQ_DATA_DIR`, `AQ_NO_OPEN`...: passed to the server it starts.
+
+The package is distributed through GitHub Packages: `npx` needs an `.npmrc` with the `@morbakos` registry and a token.
+A Docker server older than the `npx` package may expose different tools; the bridge does not reconcile them.
+
+### Option A: HTTP
 
 ### Claude Code
 

@@ -2,6 +2,13 @@
 import "reflect-metadata";
 import { ConfigError, loadConfig } from "@app/config/config.js";
 
+if (process.argv.includes("--stdio")) {
+	// Before loadConfig(): the launcher needs no server configuration, and stdout is reserved for the protocol.
+	const { runStdio } = await import("@app/stdio/run-stdio.js");
+	// Never falls through to the server startup below, whatever the outcome.
+	process.exit(await runStdio());
+}
+
 function readConfig() {
 	try {
 		return loadConfig();

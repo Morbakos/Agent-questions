@@ -70,6 +70,13 @@ tourne sur Bun. Ordre de build : `ui` → `server`.
       (jetons valables un an). Le propriétaire d'un appel d'outil est `context.request.user`. Les refus 401/403 sont
       journalisés par `http-setup.ts` (méthode et chemin, jamais de secret).
     - `health/` : `/health` (`@nestjs/terminus` : 200, ou 503 si la base ne répond pas ou pendant l'arrêt).
+    - `stdio/` : lanceur `agent-questions --stdio` (sous-commande de `main.ts`, branchée **avant** `loadConfig()`).
+      `probe.ts` (`/health`, cible `AQ_MCP_URL` ou `AQ_PORT`), `launcher-lock.ts` (`<dataDir>/launcher.lock`, `wx`,
+      périmé après 30 s), `spawn-server.ts` (démarre ce même bundle sans `--stdio`, détaché, journal
+      `<dataDir>/server.log` ; ne le tue jamais), `bridge.ts` (relais JSON-RPC `StdioServerTransport` ↔
+      `StreamableHTTPClientTransport`, `AQ_TOKEN` en `Bearer`), `run-stdio.ts` (renvoie le code de sortie).
+      **Stdout est réservé au protocole** : rien d'autre ne doit y écrire dans ce chemin. Le serveur lancé reste le
+      serveur unique partagé.
     - `src/main.ts` : point d'entrée.
     - **Build** : `scripts/build-server.ts` (Bun.build) bundle `main.ts` en `dist/index.js` (`shared` inliné, `dependencies`
       de la racine externes) et copie l'UI dans `dist/ui` (échoue si l'UI n'est pas construite). Bundle **minifié sans mangling des identifiants**
@@ -234,6 +241,9 @@ Deux profils. **Local** : pas de compte, écoute sur `127.0.0.1`, à ne pas expo
       `@nestjs/config` comme source : il recopie les clés dans `process.env` (sous Windows `port` écrase `PORT`), une erreur
       levée pendant l'initialisation de Nest n'affiche **rien** avec `AQ_LOG=silent`, et il ne s'applique pas aux objets
       `AppConfig` construits par les tests.
+    - Lanceur `stdio/` : outil en ligne de commande, pas du back Nest (aucun package Nest ne couvre un pont stdio ↔ HTTP
+      ni le démarrage d'un process détaché). Il s'appuie sur les transports du SDK MCP (`@modelcontextprotocol/client`,
+      désormais en `dependencies`).
     - `EventEmitter` de Node dans `SessionsService.wait` plutôt que `@nestjs/event-emitter` : pas d'attente avec délai,
       `AbortSignal` et réveil à l'arrêt (seulement `waitFor`).
     - `LoginThrottle` plutôt que `@nestjs/throttler` : il ne compte pas les seuls échecs, par identifiant et par adresse.

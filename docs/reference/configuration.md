@@ -59,6 +59,19 @@ explicitly if the reverse proxy is on another host or container.
 | `AQ_WAIT_SECONDS` | `0`     | Integer 0 to 3600              | both    | Default of the `wait_seconds` tool parameter. `0`: tools return `pending` at once and the agent chooses to wait. Positive: tools block that long by default. Also changes the tool descriptions seen by agents. |
 | `AQ_NO_OPEN`      | unset   | `1` (any other value is ignored) | local   | Do not open the browser when a question session is created. In the `server` profile this is always on, whatever the value. When active, the server asks the agent to give the user the list address first. |
 
+### stdio launcher
+
+Read by `agent-questions --stdio` (see [Connect your agent](../guide/connect-your-agent.md#option-b-stdio-launcher-no-docker)).
+It also uses `AQ_PORT` and `AQ_DATA_DIR`, and passes its whole environment to the server it starts.
+
+| Variable     | Default                    | Effect                                                                                                 |
+| ------------ | -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `AQ_MCP_URL` | `http://127.0.0.1:<AQ_PORT>/mcp` | Full URL of `/mcp`. A non-loopback host is never started locally: the launcher only attaches to it. |
+| `AQ_TOKEN`   | unset                      | API token sent as `Authorization: Bearer <token>` to `/mcp`.                                           |
+
+The server started by the launcher writes its output to `<AQ_DATA_DIR>/server.log` (append) and uses
+`<AQ_DATA_DIR>/launcher.lock` to serialise concurrent starts.
+
 ### Network and security
 
 | Variable             | Default | Accepted values                                  | Profile | Effect                                                                                                                                                                                                                                      |

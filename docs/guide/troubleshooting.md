@@ -179,10 +179,11 @@ default `127.0.0.1` URL on the client. For a shared deployment use the `server` 
 
 ### The container does not start (permissions)
 
-A `/data` volume created by an older image version belongs to root. Make it writable once:
+A `/data` mount that belongs to root (a volume created by an older image version, or a host directory such as
+`~/.agent-questions` created by another user) is not writable by the container user (uid 1000). Make it writable once:
 
 ```bash
-docker run --rm -v aq-data:/data alpine chown -R 1000:1000 /data
+docker run --rm -v ~/.agent-questions:/data alpine chown -R 1000:1000 /data
 ```
 
 ### The server refuses to start
@@ -204,6 +205,18 @@ Full list: [Configuration](../reference/configuration.md).
 
 The MCP client reports a connection error. Start the server (Docker with `--restart unless-stopped` brings it back after
 a reboot). Pending questions survive restarts: they are in the database.
+
+### The stdio launcher fails or the server does not start
+
+The launcher prints the last lines of `<data dir>/server.log` (`~/.agent-questions/server.log` by default) on stderr.
+
+- **Port already in use**: another program (or a server with a different configuration) holds the port. Change
+  `AQ_PORT` for both the client entry and the server, or stop the other program. The launcher only trusts a `200` from
+  `/health` with `status: ok`; any other service on the port makes the MCP `initialize` fail.
+- **The server fails at startup**: read `server.log` (invalid `AQ_*` variable, locked database...).
+- **Stale lock**: `launcher.lock` in the data directory is ignored after 30 seconds; delete it if a launcher crashed.
+- **Slow first start**: migrations run on the first launch; the launcher waits up to 15 seconds.
+- **Detached server to stop**: the launcher never stops it; end the process listening on the port.
 
 ### Health check
 
