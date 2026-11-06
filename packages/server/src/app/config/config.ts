@@ -162,6 +162,11 @@ function expandHome(path: string): string {
 	return path === "~" || path.startsWith("~/") || path.startsWith("~\\") ? join(homedir(), path.slice(1)) : path;
 }
 
+/** Data directory (`AQ_DATA_DIR`, `~/.agent-questions` by default). Shared by the server and the stdio launcher. */
+export function resolveDataDir(env: NodeJS.ProcessEnv = process.env): string {
+	return env.AQ_DATA_DIR ? expandHome(env.AQ_DATA_DIR) : join(homedir(), ".agent-questions");
+}
+
 /**
  * Reads and validates the configuration. Throws `ConfigError` rather than starting in a dangerous combination.
  *
@@ -178,7 +183,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 		throw new ConfigError("AQ_PORT must be a valid TCP port (1-65535).");
 	}
 	const allowedOrigins = parseOrigins(env);
-	const dataDir = env.AQ_DATA_DIR ? expandHome(env.AQ_DATA_DIR) : join(homedir(), ".agent-questions");
+	const dataDir = resolveDataDir(env);
 
 	let admin: AdminBootstrap | null = null;
 	let publicUrl = env.AQ_PUBLIC_URL ?? `http://127.0.0.1:${port}`;

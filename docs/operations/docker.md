@@ -30,8 +30,8 @@ loopback only (`127.0.0.1:4317:4317`), never on `0.0.0.0`. For a shared deployme
 docker compose up -d --build agent-questions
 ```
 
-The repository's `docker-compose.yml` builds the image, publishes `127.0.0.1:4317:4317`, stores data in the named
-volume `aq-data`, uses `restart: unless-stopped`, and sets:
+The repository's `docker-compose.yml` builds the image, publishes `127.0.0.1:4317:4317`, stores data in the host directory
+`~/.agent-questions` (bind mount on `/data`), uses `restart: unless-stopped`, and sets:
 
 - `AQ_ALLOWED_HOSTS=agent-questions`: accepts the Docker service name in the `Host` header, so other containers of the
   same compose project can call `http://agent-questions:4317/mcp`.
@@ -59,10 +59,7 @@ services:
     ports:
       - "127.0.0.1:4317:4317"
     volumes:
-      - aq-data:/data
-
-volumes:
-  aq-data:
+      - ~/.agent-questions:/data
 ```
 
 `AQ_DATA_DIR` (`/data`) and `AQ_BIND_HOST` (`0.0.0.0`) come from the image. If the proxy runs in the same compose
@@ -77,6 +74,14 @@ Notes:
 - **Restart policy**: use `unless-stopped` (or `always`). Every agent connects to this one process, so it should come
   back after a crash or reboot. Shutdown is graceful: pending waits are released and the database is closed.
 - **Upgrades**: see [backup and upgrade](backup-and-upgrade.md).
+
+## Coexistence with the stdio launcher
+
+A client declared with `npx ... --stdio` attaches to the Docker server when it answers on `127.0.0.1:<AQ_PORT>` (4317 by
+default; the port must be published on loopback). With Docker stopped, the launcher starts its own server on the same
+port, with the database in `~/.agent-questions`. A `docker run` that mounts `-v ~/.agent-questions:/data` (as in the
+quick start, and in the repository's `docker-compose.yml`) uses that same directory, so every mode shares one
+database. Never run two servers at once.
 
 ## The llama.cpp service (optional)
 

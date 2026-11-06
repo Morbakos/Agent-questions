@@ -23,7 +23,7 @@ Start the server once, then register it with your agent. One server is shared by
 ```bash
 # 1. The server: UI and MCP on http://127.0.0.1:4317, restarted with Docker
 docker run -d --name agent-questions --restart unless-stopped \
-  -p 127.0.0.1:4317:4317 -v aq-data:/data ghcr.io/morbakos/agent-questions:latest
+  -p 127.0.0.1:4317:4317 -v ~/.agent-questions:/data ghcr.io/morbakos/agent-questions:latest
 
 # 2. Claude Code, for all your projects
 claude mcp add --scope user --transport http agent-questions http://127.0.0.1:4317/mcp
@@ -39,6 +39,16 @@ bun install
 bun run build
 bun run start    # http://127.0.0.1:4317
 ```
+
+Without Docker, a client that launches MCP servers over stdio can start Agent Questions itself. It attaches to the
+shared server when one runs, and otherwise starts one in the background (it keeps running after the agent exits):
+
+```bash
+claude mcp add --scope user agent-questions -- npx -y @morbakos/agent-questions --stdio
+```
+
+The package is distributed through GitHub Packages: `npx` needs an `.npmrc` entry for the `@morbakos` scope with a
+token. See [Connect your agent](docs/guide/connect-your-agent.md#option-b-stdio-launcher-no-docker).
 
 Other agents (Codex, Cursor, VS Code...) only need the MCP HTTP URL `http://127.0.0.1:4317/mcp`: see
 [Connect your agent](docs/guide/connect-your-agent.md).
@@ -105,7 +115,7 @@ Also: [Troubleshooting](docs/guide/troubleshooting.md), [Security](docs/operatio
 
 - Server: Node 22.13 or later, or Bun 1.4 or later (SQLite comes from `node:sqlite`), or Docker.
 - Building from source: Bun 1.4 or later.
-- An MCP client that supports the Streamable HTTP transport.
+- An MCP client that supports the Streamable HTTP transport, or one that launches stdio servers (`command` + `args`).
 
 ## Status and versioning
 

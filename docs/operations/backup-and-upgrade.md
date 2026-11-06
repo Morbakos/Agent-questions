@@ -22,9 +22,8 @@ is unreachable.
 
 ```bash
 docker compose stop agent-questions
-docker volume ls | grep aq-data     # the volume name is prefixed by the compose project, e.g. myproject_aq-data
-docker run --rm -v myproject_aq-data:/data:ro -v "$PWD":/backup alpine \
-  tar czf /backup/aq-data-$(date +%F).tgz -C /data .
+docker run --rm -v ~/.agent-questions:/data:ro -v "$PWD":/backup alpine \
+  tar czf /backup/agent-questions-$(date +%F).tgz -C /data .
 docker compose start agent-questions
 ```
 
@@ -43,8 +42,8 @@ a restore of the result before relying on it.
 
 ```bash
 docker compose stop agent-questions
-docker run --rm -v myproject_aq-data:/data -v "$PWD":/backup alpine \
-  sh -c 'rm -rf /data/* && tar xzf /backup/aq-data-2026-01-01.tgz -C /data && chown -R 1000:1000 /data'
+docker run --rm -v ~/.agent-questions:/data -v "$PWD":/backup alpine \
+  sh -c 'rm -rf /data/* && tar xzf /backup/agent-questions-2026-01-01.tgz -C /data && chown -R 1000:1000 /data'
 docker compose start agent-questions
 curl -f http://127.0.0.1:4317/health
 ```

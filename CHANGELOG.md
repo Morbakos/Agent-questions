@@ -7,15 +7,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `agent-questions --stdio`: launcher for MCP clients that start servers over stdio. It attaches to the shared HTTP server,
+  starts a detached one when none runs, and bridges stdio to `/mcp`. New variables `AQ_MCP_URL` and `AQ_TOKEN`.
+
 ### Changed
 
+- Startup, configuration and script messages (terminal output) are now in English; the UI and API error messages stay
+  in French.
 - Documentation rewritten in English and reorganised under `docs/` (guide, operations, reference, development).
 
 ## [0.1.1]
 
 Current version in `package.json`. The git history starts with a single initial commit, so this entry describes the
-- Startup, configuration and script messages (terminal output) are now in English; the UI and API error messages stay
-  in French.
 state of the project at that point rather than a list of changes.
 
 ### Added
